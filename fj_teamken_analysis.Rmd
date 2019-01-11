@@ -1,0 +1,246 @@
+---
+title: "Team Ken FJ! analysis"
+author: "Monica Thieu"
+date: "11/22/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(googledrive)
+require(magrittr)
+require(tidyverse)
+```
+
+## Setup
+
+```{r}
+# Load the data from me google drive
+drive_download(as_id("https://docs.google.com/a/columbia.edu/spreadsheets/d/10l6IeI0VtWBaBtZDquGgIXUa0cSw-NnbbGW-F4hzfLE/edit"), path = "fj_teamken", type = "csv", overwrite = TRUE)
+
+raw <- read_csv("fj_teamken.csv",
+                col_names = c("timestamp",
+                              "name",
+                              "show_number",
+                              "show_date",
+                              "category",
+                              "response",
+                              "n_show_correct",
+                              "comments",
+                              "dd_sj_200",
+                              "dd_sj_400",
+                              "dd_sj_600",
+                              "dd_sj_800",
+                              "dd_sj_1000",
+                              "dd_dj_400",
+                              "dd_dj_800",
+                              "dd_dj_1200",
+                              "dd_dj_1600",
+                              "dd_dj_2000"),
+                skip = 1)
+
+dds <- raw %>%
+  filter(name == "Monica") %>%
+  select(show_number, starts_with("dd")) %>%
+  gather(key = "key", value = "clue_col", -show_number) %>%
+  filter(!is.na(clue_col)) %>%
+  separate(key, into = c("discard", "round", "clue_row")) %>%
+  arrange(show_number, desc(round)) %>%
+  group_by(show_number, round) %>%
+  separate(clue_col, into = c("clue_col_1", "clue_col_2"), sep = "[,]", fill = "right") %>%
+  select(-discard) %>%
+  mutate(clue_row = as.integer(clue_row),
+         clue_row = if_else(round == "sj",
+                            clue_row / 200,
+                            clue_row / 400),
+         clue_row = as.integer(clue_row),
+         clue_col_2 = str_sub(clue_col_2, start = 2L)) %>%
+  gather(key = "discard", value = "clue_col", starts_with("clue_col")) %>%
+  select(-discard) %>%
+  filter(!is.na(clue_col)) %>%
+  mutate(clue_col = as.integer(str_sub(clue_col, start = -1L)))
+
+d <- raw %>%
+  select(-timestamp, -show_date, -starts_with("dd")) %>%
+  mutate(category = toupper(category),
+         response = tolower(response),
+         response = recode(response,
+                           `incorrect, but thought of the correct answer and negged myself` = "self_neg",
+                           `incorrect, but only because of spelling etc.` = "misspell",
+                           `incorrect, but figured out what the clue was really asking for` = "almost"),
+         response_binary = if_else(response == "correct", 1L, 0L),
+         response_ternary = case_when(response == "correct" ~ 1,
+                                      response %in% c("self_neg", "misspell") ~ 0.5,
+                                      TRUE ~ 0),
+         season = if_else(show_number >= 7586, 34, 26),
+         category_ll = if_else(str_detect(comments, "ll \\("),
+                               str_extract(comments, "\\(([^)]+)\\)"),
+                               NA_character_),
+         category_ll = str_sub(category_ll, start = 2L, end = -2L),
+         category_ll = str_split(category_ll, pattern = ", "),
+         category_ll_main = map_chr(category_ll, ~.x[1])) %>%
+  group_by(season, show_number, category) %>%
+  # Hack to get Monica's stuff on top
+  arrange(desc(name)) %>%
+  nest() %>%
+  mutate(category_ll = map(data, ~.x$category_ll[[1]]),
+         category_ll_main = map_chr(data, ~.x$category_ll_main[1]),
+         data = map(data, ~.x %>% select(-starts_with("category_ll"))),
+         toc = if_else(show_number %in% c(5916:5925, 7626:7635), TRUE, FALSE))
+
+d_wide <- d %>%
+  unnest(data, .preserve = "category_ll") %>%
+  select(-comments, -starts_with("response_")) %>%
+  mutate(name = recode(name,
+                       Ken = "resp_kj",
+                       Matt = "resp_mj",
+                       Monica = "resp_mt")) %>%
+  spread(name, response)
+
+d_wide_complete <- d_wide %>%
+  filter(!is.na(resp_kj), !is.na(resp_mj), !is.na(resp_mt))
+```
+
+## Person performance stuff
+
+```{r}
+d %>%
+  filter(show_number %in% d_wide_complete$show_number, !is.na(category_ll_main), season == 34) %>%
+  unnest(data) %>%
+  ggplot(aes(x = name, fill = factor(response_binary))) +
+  geom_bar() +
+  scale_fill_manual(values = c("salmon", "springgreen2")) +
+  facet_wrap(~category_ll_main, scales = "free_y") +
+  labs(x = "Team member",
+       y = "# of questions",
+       fill = "Correct?") +
+  theme_bw()
+```
+
+```{r}
+d %>%
+  filter(show_number %in% d_wide_complete$show_number, !is.na(category_ll_main), season == 34) %>%
+  unnest(data) %>%
+  ggplot(aes(x = name, fill = factor(response_ternary))) +
+  geom_bar() +
+  scale_fill_manual(values = c("salmon", "goldenrod1", "springgreen2")) +
+  facet_wrap(~category_ll_main, scales = "free_y") +
+  labs(x = "Team member",
+       y = "# of questions",
+       fill = "Correct?") +
+  theme_bw()
+```
+
+```{r}
+d %>%
+  filter(toc) %>%
+  unnest(data) %>%
+  ggplot(aes(x = name, fill = factor(response_binary))) +
+  geom_bar() +
+  scale_fill_manual(values = c("salmon", "springgreen2")) +
+  facet_wrap(~season, scales = "fixed") +
+  labs(x = "Team member",
+       y = "# of questions",
+       fill = "Correct?") +
+  theme_bw()
+```
+
+## Category frequency stuff
+
+```{r}
+d_wide_complete %>%
+  filter(!is.na(category_ll_main)) %>%
+  group_by(season) %>%
+  count(category_ll_main) %>%
+  mutate(n = if_else(season == 26, -1L * n, n),
+         category_ll_main = fct_reorder(category_ll_main, n, .fun = max, .desc = TRUE)) %>%
+  ggplot(aes(x = category_ll_main, y = n, fill = factor(season))) +
+  geom_bar(stat = "identity") +
+  # scale_fill_manual(values = c("salmon", "springgreen2")) +
+  # facet_wrap(~category_ll_main, scales = "free_y") +
+  coord_flip() +
+  labs(x = "broad category",
+       y = "# of questions",
+       fill = "season",
+       title = "FJ category frequencies by season") +
+  theme_bw()
+```
+
+## Daily double stuff
+
+```{r}
+dds %>%
+  group_by(round, clue_row, clue_col) %>%
+  tally() %>%
+  ungroup() %>%
+  mutate(round = recode(round,
+                        sj = "Single Jeopardy",
+                        dj = "Double Jeopardy"),
+         round = fct_rev(round)) %>%
+  ggplot(aes(x = clue_col, y = clue_row, fill = n)) +
+  geom_raster() +
+  scale_y_reverse() +
+  viridis::scale_fill_viridis() +
+  facet_wrap(~ round) +
+  labs(x = "Clue column",
+       y = "Clue row",
+       title = "Heatmap of DD incidence, most of S34",
+       subtitle = "SJ slightly dimmer than DJ bc of more DDs left covered?",
+       fill = "# of DDs") +
+  theme_bw()
+```
+
+```{r}
+dds %>%
+  filter(round == "dj") %>%
+  select(-clue_col) %>%
+  group_by(show_number) %>%
+  mutate(index = paste0("row_", 1:n())) %>%
+  spread(index, clue_row) %>%
+  mutate(row_diff = row_2 - row_1) %>%
+  ggplot(aes(x = row_diff)) +
+  geom_histogram(binwidth = 1) +
+  labs(x = "ROW distance ($ amount) between DJ DDs") +
+  theme_bw()
+```
+
+
+```{r}
+dds %>%
+  filter(round == "dj") %>%
+  select(-clue_row) %>%
+  group_by(show_number) %>%
+  mutate(index = paste0("col_", 1:n())) %>%
+  spread(index, clue_col) %>%
+  mutate(col_diff = abs(col_2 - col_1)) %>%
+  ggplot(aes(x = col_diff)) +
+  geom_histogram(binwidth = 1) +
+  labs(x = "COL distance (categories) between DJ DDs") +
+  theme_bw()
+```
+
+```{r}
+# If daily double locations were chosen completely independently of each other,
+# what should the base rates of col-wise distance be? row-wise distance?
+
+dd_sims <- tibble(id = 1:1000) %>%
+  mutate(col_1 = sample(1:6, size = n(), replace = T),
+         col_2 = map_int(col_1, ~sample((1:6)[1:6 != .x], size = 1, replace = T)),
+         row_1 = sample(2:5, size = n(), replace = T),
+         row_2 = sample(2:5, size = n(), replace = T),
+         col_diff = abs(col_2 - col_1),
+         row_diff = abs(row_2 - row_1))
+
+dd_sims %>%
+  ggplot(aes(x = row_diff)) +
+  geom_histogram(binwidth = 1) +
+  labs(x = "ROW distance ($ amount) between DJ DDs") +
+  theme_bw()
+
+dd_sims %>%
+  ggplot(aes(x = col_diff)) +
+  geom_histogram(binwidth = 1) +
+  labs(x = "COL distance (categories) between DJ DDs") +
+  theme_bw()
+```
+
