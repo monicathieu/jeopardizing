@@ -2,15 +2,29 @@
 title: "Team Ken FJ! analysis"
 author: "Monica Thieu"
 date: "11/22/2018"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 require(googledrive)
 require(magrittr)
 require(tidyverse)
+require(rvest)
+# Apparently we need this shit now
+options(mc.cores = parallel::detectCores())
 ```
+
+Jeopardy!, the ultimate knowledge-based game show (in my opinion), lends itself very well to analysis about the game itself.
+
+For the 2019 Jeopardy! All-Star Games, I started doing some rough analyses about what kinds of patterns appear in Jeopardy! games that we might be able to harness for our own use.
+
+What this blog post **is:**
+
+What this blog post **is not:**
 
 ## Setup
 
@@ -147,6 +161,8 @@ d %>%
 
 ## Category frequency stuff
 
+I realized that a big piece of information we could recover from the Final Jeopardy! clues that we all answered was _clue categories._
+
 ```{r}
 d_wide_complete %>%
   filter(!is.na(category_ll_main)) %>%
@@ -242,5 +258,243 @@ dd_sims %>%
   geom_histogram(binwidth = 1) +
   labs(x = "COL distance (categories) between DJ DDs") +
   theme_bw()
+```
+
+
+## extra lock 2 game shit
+
+I was going to do a rough grid search across possible score sets to see the conformations that end in a game 2 lock, but the dataframe gets huge very quickly and stuff was running a little too slow for my taste.
+
+```{r, eval = FALSE}
+scores <- crossing(team1_game1 = 1:30,
+                   team2_game1 = 1:30,
+                   team3_game1 = 1:30) %>%
+  filter(team1_game1 >= team2_game1, team1_game1 >= team3_game1)
+```
+
+## Daily Double extravaganza (as heard on Planet Money)
+
+```{r big ass dd scrapey bitch, eval = FALSE}
+seasons_raw <- 25:35 %>%
+  paste0("http://www.j-archive.com/showseason.php?season=", .) %>%
+  map(~read_html(.)) %>%
+  map(~html_nodes(., "a"))
+
+jscrape_raw <- seasons_raw %>%
+  tibble(season = 25:35,
+         raw = .) %>%
+  mutate(text = map(raw, ~html_text(., trim = T)),
+         link = map(raw, ~html_attr(., "href"))) %>%
+  select(-raw) %>%
+  unnest() %>%
+  filter(grepl("showgame", link)) %>%
+  mutate(web_id = as.integer(str_sub(link, start = -4L)),
+         game_id = as.integer(str_sub(text, start = 2L, end = 5L)),
+         these_htmls = map(web_id, ~read_html(paste0("http://j-archive.com/showgame.php?game_id=", .x))),
+         these_nodes = map(these_htmls, ~html_nodes(.x, ".clue")))
+
+jscrape <- jscrape_raw$these_nodes %>%
+  map(~.x %>%
+        html_text(trim = T) %>%
+        tibble(raw = .) %>%
+        # bye bye FJ, for now at least
+        slice(-nrow(.))) %>%
+  tibble(season = jscrape_raw$season,
+         web_id = jscrape_raw$web_id,
+         stuff = .) %>%
+  filter(map_int(stuff, nrow) == 60) %>%
+  unnest() %>%
+  separate(raw, into = c("value", "order", "blank1", "blank2", "clue"), sep = "\n", fill = "right") %>%
+  select(-starts_with("blank")) %>%
+  mutate_all(str_trim, side = "both") %>%
+  mutate(web_id = as.integer(web_id)) %>%
+  # Splicing clue point value for the empty cells
+  group_by(web_id) %>%
+  mutate(idx = 1:n()) %>%
+  filter(web_id != 3719) %>%
+  mutate(column = rep(1:6, times = 10),
+         row = rep(1:5, each = 6, times = 2),
+         round = rep(c("sj", "dj"), each = 30),
+         is_dd = if_else(startsWith(value, "DD"), TRUE, FALSE),
+         nspaces_clue = str_count(clue, " ")) %>%
+  select(-value, -idx)
+
+write_csv(jscrape, "dd_scrape_25_35.csv")
+```
+
+```{r}
+jscrape <- read_csv("dd_scrape_25_35.csv")
+```
+
+```{r}
+jscrape %>%
+  group_by(season, web_id, round, row, column) %>%
+  summarize(n = sum(is_dd),
+            mean_nspaces = mean(nspaces_clue, na.rm = TRUE)) %>%
+  mutate(category_length = if_else(mean_nspaces > 10,
+                                      "long",
+                                      "short",
+                                      missing = "short")) %>%
+  group_by(round, row, column, category_length) %>%
+  summarize(n = sum(n)) %>%
+  ungroup() %>%
+  mutate(round = recode(round,
+                        sj = "Single Jeopardy",
+                        dj = "Double Jeopardy"),
+         round = fct_rev(round),
+         n = na_if(n, 0),
+         n = if_else(round == "Double Jeopardy",
+                     n/2,
+                     as.double(n))) %>%
+  ggplot(aes(x = column, y = row, fill = n)) +
+  geom_raster() +
+  scale_y_reverse() +
+  viridis::scale_fill_viridis() +
+  # Remove category_length if not conditioning by this
+  facet_grid(category_length ~ round) +
+  labs(x = "Clue column",
+       y = "Clue row",
+       title = "Heatmap of DD incidence, most of seasons 25-35",
+       subtitle = "DDs don't come up in wordplay categories",
+       fill = "# of DDs") +
+  theme_bw()
+```
+
+```{r}
+jscrape %>%
+  group_by(web_id, round, column) %>%
+  summarize(mean_nspaces = mean(nspaces_clue, na.rm = TRUE),
+            contains_dd = sum(is_dd)) %>%
+  ungroup() %>%
+  mutate(round = recode(round,
+                        sj = "Single Jeopardy",
+                        dj = "Double Jeopardy"),
+         round = fct_rev(round)) %>%
+  ggplot(aes(x = mean_nspaces, fill = factor(contains_dd))) +
+  geom_density(alpha = 0.5) +
+  labs(x = "# spaces per clue (proxy for word count)",
+       title = "Category wordiness by DD incidence") +
+  facet_grid(~round) +
+  theme_bw()
+```
+
+```{r}
+jscrape %>%
+  filter(round == "dj", is_dd) %>%
+  select(web_id, row) %>%
+  group_by(web_id) %>%
+  mutate(index = paste0("row_", 1:n())) %>%
+  spread(index, row) %>%
+  select(-row_3) %>%
+  mutate(row_diff = row_2 - row_1) %>%
+  ggplot(aes(x = row_diff)) +
+  geom_histogram(binwidth = 1) +
+  labs(x = "ROW distance ($ amount) between DJ DDs") +
+  theme_bw()
+```
+
+```{r}
+jscrape %>%
+  filter(round == "dj", is_dd) %>%
+  select(web_id, column) %>%
+  group_by(web_id) %>%
+  mutate(index = paste0("col_", 1:n())) %>%
+  spread(index, column) %>%
+  # This one game has 3 DDs listed but it must be wrong lol
+  select(-col_3) %>%
+  mutate(col_diff = abs(col_2 - col_1)) %>%
+  ggplot(aes(x = col_diff)) +
+  geom_histogram(binwidth = 1) +
+  labs(x = "COL distance (categories) between DJ DDs") +
+  theme_bw()
+```
+
+```{r}
+dd_by_row <- jscrape %>%
+  mutate(is_dd = as.integer(is_dd),
+         # center at 10 words/clue (my wordplay cutoff)
+         row = row - 3,
+         row_quad = abs(row),
+         column = column - 1,
+         season = season - 35) %>%
+  group_by(web_id, round, column) %>%
+  mutate(category_length = if_else(mean(nspaces_clue) > 10,
+                                      "long",
+                                      "short",
+                                      missing = "short")) %>%
+  ungroup() %>%
+  filter(!is.na(is_dd)) %>%
+  nest(-round) %>%
+  mutate(model = map(data, ~glm(is_dd ~ factor(row) + category_length + season - 1, 
+                                family = binomial(),
+                                data = .)))
+```
+
+```{r}
+summary(dd_by_row$model[[2]])
+```
+
+```{r}
+summary(dd_by_row$model[[1]])
+```
+
+```{r glm of prob of wordplay by column location}
+category_length_by_col <- jscrape %>%
+  group_by(season, web_id, round, column) %>%
+  # signed so 1 is a short category
+  summarize(category_length = mean(nspaces_clue, na.rm = T) <= 10) %>%
+  ungroup() %>%
+  filter(!is.na(category_length)) %>%
+  mutate(season = season - 35) %>%
+  nest(-round) %>%
+  mutate(model = map(data, ~glm(category_length ~ factor(column) + season - 1, family = binomial(), data = .)))
+
+category_length_by_col$model %>% map(summary)
+```
+
+Wordplay categories are less likely to be in the 1st column and more likely to be in the 6th column.
+
+```{r}
+dd_by_col <- jscrape %>%
+  mutate(is_dd = as.integer(is_dd),
+         # center at 10 words/clue (my wordplay cutoff)
+         season = season - 35) %>%
+  filter(!is.na(is_dd)) %>%
+  group_by(season, web_id, round, column) %>%
+  summarize(category_length = if_else(mean(nspaces_clue, na.rm = TRUE) > 10,
+                                      "long",
+                                      "short"),
+            contains_dd = sum(is_dd)) %>%
+  ungroup() %>%
+  nest(-round) %>%
+  mutate(model = map(data, ~glm(contains_dd ~ factor(column) + category_length + season, 
+                                family = binomial(),
+                                data = .)))
+```
+
+```{r}
+summary(dd_by_col$model[[2]])
+```
+
+```{r}
+summary(dd_by_col$model[[1]])
+```
+
+```{r}
+dd_by_col %>%
+  select(-model) %>%
+  unnest() %>%
+  filter(contains_dd == 1)
+
+# This is category long-ness by column, categorically
+jscrape %>%
+  group_by(season, web_id, round, column) %>%
+  # signed so 1 is a short category
+  summarize(category_length = mean(nspaces_clue, na.rm = T) <= 10) %>%
+  ungroup() %>%
+  filter(!is.na(category_length)) %>%
+  mutate(season = season - 35) %>%
+  glm(category_length ~ factor(column) + season - 1, family = binomial(), data = .) %>%
+  summary()
 ```
 
