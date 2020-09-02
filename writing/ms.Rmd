@@ -1,0 +1,48 @@
+---
+title: "J-Study manuscript"
+author: "Monica Thieu"
+date: "5/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Intro
+
+Derpy abstract for myself:
+
+Individual behavioral differences in human memory pay testament to the complexity of our memory systems. Studying people performing at extremes of the memory spectrum can help us learn more about memory systems as they might function in the typical individual. However, memory, especially superior memory, is not a single construct. People may exhibit markedly strong memory in a variety of ways, each of which might rely on a different feature of the memory system. Nearly all research on people with superior memory has focused on superior memorizers, or individuals with the ability, through some combination of untrained and trained strategy, to quickly encode large amounts of information, typically otherwise meaningless, and retrieve it with high accuracy. 
+
+Not all feats of impressive memory involve encoding large bodies of information at once, whether incidental or intentional. Other feats of memory are (or appear) more retrieval-based. Trivia games are one popular example, where competitors attempt to retrieve the most general knowledge, often as quickly as possible. Trivia experts are able to rapidly retrieve a broad range of facts, often having first encoded these facts years in the past. Notably, they often do this without apparent use of any memorization strategy [CITE]. Given two people with approximately equivalent life experience, and exposure to general knowledge through schooling, what leads one person to be more successful in retaining and/or retrieving facts in a cued recall situation?
+
+Basic outline:
+
+- Episodic and semantic memory: separate? intertwined?
+    - MTL amnesics perform worse than controls on semantic fluency tasks (name exemplars of X category) that can be solved with an autobiographical episodic strategy [e.g. @Greenberg:2009fq; @Sheldon:2012ju]
+    - To the degree that a task is not "process-pure," we are likely to observe interdependencies between semantic and episodic memory if both might be individually contributing to task performance. But what about semantic memory tasks that do not have obvious episodic strategies, typically those that are speeded enough to preclude episodic elaboration?
+        - Participants making famous/nonfamous judgments of names, and reading names out loud, are faster to judge/read famous names with greater autobiographical significance, such that those names are more likely to be associated with autobiographical memories [@Westmacott:2003ee]
+        - Participants make lexical decisions about studied words faster for words they will later "remember" vs "know" [@Sheldon:2010cd]. The authors suggest this provides evidence for ecphory or some other fast episodic retrieval component
+        - Ecphoric signals may be detected _early_ during old/new recognition trials [@Waldhauser:2016fx]
+        - Can this putative ecphory also support complex semantic retrieval, like answering general knowledge questions?
+- What can studying trivia experts tell us about overlap between episodic and semantic memory?
+    - individual differences in ecphoric strength at retrieval could contribute to 
+    - detect differing contributions of encoding- and retrieval-stage processes to overall retrieval success
+    - 
+- What can studying trivia experts tell us that studying other special populations doesn't?
+    - Relative to **amnesic patients:** patient work allows us to make critical claims about necessary and sufficient contributions of different structures/systems to memory tasks. However, these conclusions might not apply at the other end of the spectrum. Said otherwise, the contribution of "pure" episodic vs semantic components to task performance might not vary linearly with episodic and semantic memory ability all the way along the spectrum from impaired to exceptional.
+    - Relative to folks with **highly superior autobiographical memory:** Most people with HSAM who have been documented in case and group studies fail to show superior memory for historical events that happened before they were born. General knowledge expertise seems epiphenomenal to superior memory for current events as a subset of autobiographical memory [@McGaugh:2014jh]
+    - Relative to **memory champions:** modern memory champions deploy deliberate mnemonic strategies to encode huge amounts of information in a single sitting. General knowledge generally is acquired bit by bit and then tested at once, as opposed to having to encode at once and retrieve at once. Memory champions SEEM (cite? hard to find when people test this stuff) not to show above average general knowledge
+
+    
+- What research has been done on superior memory?
+    - Superior memorizers
+    - (MAYBE SCRATCH) savants?
+    - Highly superior autobiographical memory
+- What can studying trivia experts tell us that studying other superior memory groups doesn't?
+    - Trivia expertise might be more likely to derive from innate memory differences than superior memorization, which tends to rely on becoming facile with a strategy
+    - Trivia facts, as must anything else, must be encoded through episodic mechanisms, but once encoded, are considered squarely within the domain of semantic memory. Studying trivia memory can tell us a lot about the putative boundary between episodic and semantic memory
+    - [@Brandt:2017cd]
+- What research has been done on general knowledge capacity as its own memory construct?
+- Thus, the current study
