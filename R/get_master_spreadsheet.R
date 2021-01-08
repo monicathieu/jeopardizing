@@ -90,6 +90,21 @@ encoding <- master_spreadsheet %>%
 
 retrieval_facts <- master_spreadsheet
 
-retrieval_pics <- master_spreadsheet
-  
+master_spreadsheet$randomise_trials <- seq.int(nrow(master_spreadsheet))
+
+retrieval_pics <- master_spreadsheet %>%
+  select(randomise_trials,
+          randomise_blocks,
+          trial_num,
+          group,
+  starts_with("randomise_trials"),
+       starts_with("pic_c"),
+       starts_with("pic_d")) %>% 
+  arrange(randomise_trials) %>% 
+  mutate(display = "memorise") %>% 
+  bind_rows(tibble(display = "study_instructions"),
+            .,
+            tibble(display = "finish"))
+#hacks, need to create a randomize trials column
+
 # TODO: Save widened spreadsheet to csv
