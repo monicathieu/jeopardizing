@@ -62,7 +62,6 @@ master_spreadsheet <- master_spreadsheet_raw %>%
   select(-info_nonacademic, -info_academic) %>% 
   unnest(info_all) %>% 
   select(-category) %>% 
-  # TODO: Specify these args correctly so we don't get list-col output
   pivot_wider(names_from = starts_with("category_label"),
               # encoding_trial_num is the ID col here
               # only specify it as omitted from values_from
