@@ -79,6 +79,8 @@ encoding <- master_spreadsheet %>%
   # using randomise_blocks appears not to allow easy feeding of block order
   # into the next task
   # so right now, encoding order is fixed for everybody
+  # bind on the start/finish display rows LATER
+  # when encoding is split into 2 before writing into 1st/2nd half CSVs
   select(encoding_trial_num,
          group,
          trial_num,
@@ -86,10 +88,7 @@ encoding <- master_spreadsheet %>%
          starts_with("pic_a"),
          starts_with("pic_b")) %>% 
   arrange(encoding_trial_num) %>% 
-  mutate(display = "memorise") %>% 
-  bind_rows(tibble(display = "study_instructions"),
-            .,
-            tibble(display = "finish"))
+  mutate(display = "memorise")
 
 retrieval_facts_order <- list(
   tibble(randomise_blocks = 1L,
@@ -191,8 +190,19 @@ retrieval_pics <- master_spreadsheet %>%
 
 # TODO: Save widened spreadsheet to csv
 
-write_csv(encoding,
-          here::here("stim_stuff", "stimlist_encoding.csv"), na = "")
+encoding %>% 
+  slice(1:40) %>% 
+  bind_rows(tibble(display = "study_instructions"),
+            .,
+            tibble(display = "finish")) %>% 
+  write_csv(here::here("stim_stuff", "stimlist_encoding_firsthalf.csv"), na = "")
+
+encoding %>% 
+  slice(41:80) %>% 
+  bind_rows(tibble(display = "study_instructions"),
+            .,
+            tibble(display = "finish")) %>% 
+  write_csv(here::here("stim_stuff", "stimlist_encoding_secondhalf.csv"), na = "")
 
 write_csv(retrieval_facts,
           here::here("stim_stuff", "stimlist_retrieval_facts.csv"), na = "")
