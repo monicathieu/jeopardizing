@@ -74,9 +74,13 @@ master_spreadsheet <- master_spreadsheet_raw %>%
 
 
 encoding <- master_spreadsheet %>% 
+  # NOT INCLUDING RANDOMISE_BLOCKS RIGHT NOW
+  # retrieval facts requires knowing which blocks appeared in which order
+  # using randomise_blocks appears not to allow easy feeding of block order
+  # into the next task
+  # so right now, encoding order is fixed for everybody
   select(encoding_trial_num,
          group,
-         randomise_blocks,
          trial_num,
          starts_with("encoding_sentence"),
          starts_with("pic_a"),
