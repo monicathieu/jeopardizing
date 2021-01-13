@@ -188,7 +188,7 @@ retrieval_pics <- master_spreadsheet %>%
             .,
             tibble(display = "finish"))
 
-# TODO: Save widened spreadsheet to csv
+# TODO: set different finish displays for first and second half encoding
 
 encoding %>% 
   slice(1:40) %>% 
