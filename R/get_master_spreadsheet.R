@@ -192,16 +192,16 @@ retrieval_pics <- master_spreadsheet %>%
 
 encoding %>% 
   slice(1:40) %>% 
-  bind_rows(tibble(display = "study_instructions"),
+  bind_rows(tibble(display = "instructions_firsthalf"),
             .,
-            tibble(display = "finish")) %>% 
+            tibble(display = "finish_firsthalf")) %>% 
   write_csv(here::here("stim_stuff", "stimlist_encoding_firsthalf.csv"), na = "")
 
 encoding %>% 
   slice(41:80) %>% 
-  bind_rows(tibble(display = "study_instructions"),
+  bind_rows(tibble(display = "instructions_secondhalf"),
             .,
-            tibble(display = "finish")) %>% 
+            tibble(display = "finish_secondhalf")) %>% 
   write_csv(here::here("stim_stuff", "stimlist_encoding_secondhalf.csv"), na = "")
 
 write_csv(retrieval_facts,
