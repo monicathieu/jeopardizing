@@ -87,8 +87,7 @@ encoding <- master_spreadsheet %>%
          starts_with("encoding_sentence"),
          starts_with("pic_a"),
          starts_with("pic_b")) %>% 
-  arrange(encoding_trial_num) %>% 
-  mutate(display = "memorise")
+  arrange(encoding_trial_num)
 
 retrieval_facts_order <- list(
   tibble(randomise_blocks = 1L,
@@ -188,10 +187,9 @@ retrieval_pics <- master_spreadsheet %>%
             .,
             tibble(display = "finish"))
 
-# TODO: set different finish displays for first and second half encoding
-
 encoding %>% 
   slice(1:40) %>% 
+  mutate(display = "memorise_firsthalf") %>% 
   bind_rows(tibble(display = "instructions_firsthalf"),
             .,
             tibble(display = "finish_firsthalf")) %>% 
@@ -199,6 +197,7 @@ encoding %>%
 
 encoding %>% 
   slice(41:80) %>% 
+  mutate(display = "memorise_secondhalf") %>% 
   bind_rows(tibble(display = "instructions_secondhalf"),
             .,
             tibble(display = "finish_secondhalf")) %>% 
