@@ -168,7 +168,7 @@ retrieval_facts <- master_spreadsheet %>%
          randomise_blocks,
          randomise_trials,
          everything()) %>% 
-  bind_rows(tibble(display = "study_instructions"),
+  bind_rows(tibble(display = "instructions"),
             .,
             tibble(display = "finish"))
 
@@ -178,12 +178,27 @@ retrieval_pics <- master_spreadsheet %>%
          starts_with("pic_c"),
          starts_with("pic_d")) %>% 
   mutate(randomise_trials = 1L,
-         display = "mem_intrusion") %>% 
+         display = "test") %>% 
   select(trial_num,
          display,
          randomise_trials,
          everything()) %>% 
-  bind_rows(tibble(display = "mem_intrusion_instructions"),
+  bind_rows(tibble(display = "instructions"),
+            .,
+            tibble(display = "finish"))
+
+retrieval_source <- master_spreadsheet %>% 
+  select(encoding_trial_num,
+         group,
+         trial_num,
+         starts_with("encoding_sentence")) %>% 
+  arrange(encoding_trial_num) %>% 
+  mutate(encoding_block = if_else(encoding_trial_num <= 40, "early", "late"),
+         display = "test",
+         # DO randomise trials completely for the source test
+         randomise_trials = 1) %>% 
+  select(randomise_trials, display, encoding_block, group, trial_num, everything()) %>% 
+  bind_rows(tibble(display = "instructions"),
             .,
             tibble(display = "finish"))
 
@@ -208,3 +223,6 @@ write_csv(retrieval_facts,
 
 write_csv(retrieval_pics,
           here::here("stim_stuff", "stimlist_retrieval_pics.csv"), na = "")
+
+write_csv(retrieval_source,
+          here::here("stim_stuff", "stimlist_retrieval_source.csv"), na = "")
