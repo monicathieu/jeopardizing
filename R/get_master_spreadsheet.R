@@ -13,6 +13,7 @@ drive_download(file = as_id("1degtvNziMvUM3V7wBX6VPkYyuUsEKOezWb8VZ933Irw"),
 master_spreadsheet_raw <- read_csv(here::here("stim_stuff", "master_spreadsheet.csv"))
 
 master_spreadsheet <- master_spreadsheet_raw %>% 
+  select(-ends_with("pretest")) %>% 
   pivot_longer(cols = -c(trial_num:display),
                names_to = c("category", ".value"),
                names_sep = 5L) %>% 
