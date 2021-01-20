@@ -1,0 +1,33 @@
+display,category,randomise_blocks,randomise_trials,trial_num,pic_a.correct,pic_b.correct,object_name,pic_a.button1,pic_a.button2,pic_a.button3,pic_a.button4,pic_a.button5,pic_b.button1,pic_b.button2,pic_b.button3,pic_b.button4,pic_b.button5
+instructions,,,,,,,,,,,,,,,,,
+test,arms,1,1,15,arms15a.jpeg,arms15b.png,wonna,arms15a.jpeg,arms19a.jpeg,arms25a.png,arms32a.png,arms36a.png,arms15b.png,arms19b.png,arms25b.jpeg,arms32b.png,arms36b.png
+test,arms,1,1,19,arms19a.jpeg,arms19b.png,bagh nakh,arms15a.jpeg,arms19a.jpeg,arms25a.png,arms32a.png,arms36a.png,arms15b.png,arms19b.png,arms25b.jpeg,arms32b.png,arms36b.png
+test,arms,1,1,25,arms25a.png,arms25b.jpeg,shamshir,arms15a.jpeg,arms19a.jpeg,arms25a.png,arms32a.png,arms36a.png,arms15b.png,arms19b.png,arms25b.jpeg,arms32b.png,arms36b.png
+test,arms,1,1,32,arms32a.png,arms32b.png,hauberk,arms15a.jpeg,arms19a.jpeg,arms25a.png,arms32a.png,arms36a.png,arms15b.png,arms19b.png,arms25b.jpeg,arms32b.png,arms36b.png
+test,arms,1,1,36,arms36a.png,arms36b.png,besagew,arms15a.jpeg,arms19a.jpeg,arms25a.png,arms32a.png,arms36a.png,arms15b.png,arms19b.png,arms25b.jpeg,arms32b.png,arms36b.png
+test,cars,2,2,12,cars12a.jpeg,cars12b.jpeg,flywheel,cars12a.jpeg,cars13a.jpeg,cars16a.jpeg,cars23a.jpeg,cars33a.jpeg,cars12b.jpeg,cars13b.jpeg,cars16b.jpeg,cars23b.jpeg,cars33b.jpeg
+test,cars,2,2,13,cars13a.jpeg,cars13b.jpeg,torque converter,cars12a.jpeg,cars13a.jpeg,cars16a.jpeg,cars23a.jpeg,cars33a.jpeg,cars12b.jpeg,cars13b.jpeg,cars16b.jpeg,cars23b.jpeg,cars33b.jpeg
+test,cars,2,2,16,cars16a.jpeg,cars16b.jpeg,catalytic converter,cars12a.jpeg,cars13a.jpeg,cars16a.jpeg,cars23a.jpeg,cars33a.jpeg,cars12b.jpeg,cars13b.jpeg,cars16b.jpeg,cars23b.jpeg,cars33b.jpeg
+test,cars,2,2,23,cars23a.jpeg,cars23b.jpeg,differential,cars12a.jpeg,cars13a.jpeg,cars16a.jpeg,cars23a.jpeg,cars33a.jpeg,cars12b.jpeg,cars13b.jpeg,cars16b.jpeg,cars23b.jpeg,cars33b.jpeg
+test,cars,2,2,33,cars33a.jpeg,cars33b.jpeg,drum brake,cars12a.jpeg,cars13a.jpeg,cars16a.jpeg,cars23a.jpeg,cars33a.jpeg,cars12b.jpeg,cars13b.jpeg,cars16b.jpeg,cars23b.jpeg,cars33b.jpeg
+test,cook,3,3,2,cook2a.jpeg,cook2b.png,blewit,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,cook,3,3,3,cook3a.jpeg,cook3b.png,ramp,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,cook,3,3,10,cook10a.jpeg,cook10b.jpeg,escabeche,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,cook,3,3,11,cook11a.jpeg,cook11b.jpeg,galantine,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,cook,3,3,13,cook13a.jpeg,cook13b.png,involtino,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,dino,4,4,15,dino15a.jpeg,dino15b.png,Megalosaurus,dino15a.jpeg,dino23a.png,dino25a.png,dino33a.jpeg,dino35a.jpeg,dino15b.png,dino23b.png,dino25b.png,dino33b.jpeg,dino35b.jpeg
+test,dino,4,4,23,dino23a.png,dino23b.png,Cetiosaurus,dino15a.jpeg,dino23a.png,dino25a.png,dino33a.jpeg,dino35a.jpeg,dino15b.png,dino23b.png,dino25b.png,dino33b.jpeg,dino35b.jpeg
+test,dino,4,4,25,dino25a.png,dino25b.png,Citipati,dino15a.jpeg,dino23a.png,dino25a.png,dino33a.jpeg,dino35a.jpeg,dino15b.png,dino23b.png,dino25b.png,dino33b.jpeg,dino35b.jpeg
+test,dino,4,4,33,dino33a.jpeg,dino33b.jpeg,Aepyornis,dino15a.jpeg,dino23a.png,dino25a.png,dino33a.jpeg,dino35a.jpeg,dino15b.png,dino23b.png,dino25b.png,dino33b.jpeg,dino35b.jpeg
+test,dino,4,4,35,dino35a.jpeg,dino35b.jpeg,Shonisaurus,dino15a.jpeg,dino23a.png,dino25a.png,dino33a.jpeg,dino35a.jpeg,dino15b.png,dino23b.png,dino25b.png,dino33b.jpeg,dino35b.jpeg
+test,gems,5,5,11,gems11a.jpeg,gems11b.jpeg,pegmatite,gems11a.jpeg,gems13a.png,gems15a.jpeg,gems26a.jpeg,gems35a.jpeg,gems11b.jpeg,gems13b.jpeg,gems15b.jpeg,gems26b.jpeg,gems35b.png
+test,gems,5,5,13,gems13a.png,gems13b.jpeg,botryoidal crystal,gems11a.jpeg,gems13a.png,gems15a.jpeg,gems26a.jpeg,gems35a.jpeg,gems11b.jpeg,gems13b.jpeg,gems15b.jpeg,gems26b.jpeg,gems35b.png
+test,gems,5,5,15,gems15a.jpeg,gems15b.jpeg,chalcedony,gems11a.jpeg,gems13a.png,gems15a.jpeg,gems26a.jpeg,gems35a.jpeg,gems11b.jpeg,gems13b.jpeg,gems15b.jpeg,gems26b.jpeg,gems35b.png
+test,gems,5,5,26,gems26a.jpeg,gems26b.jpeg,howlite,gems11a.jpeg,gems13a.png,gems15a.jpeg,gems26a.jpeg,gems35a.jpeg,gems11b.jpeg,gems13b.jpeg,gems15b.jpeg,gems26b.jpeg,gems35b.png
+test,gems,5,5,35,gems35a.jpeg,gems35b.png,cabochon crystal,gems11a.jpeg,gems13a.png,gems15a.jpeg,gems26a.jpeg,gems35a.jpeg,gems11b.jpeg,gems13b.jpeg,gems15b.jpeg,gems26b.jpeg,gems35b.png
+test,musi,6,6,6,musi6a.png,musi6b.png,rabab,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,musi,6,6,11,musi11a.jpeg,musi11b.jpeg,theorbo,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,musi,6,6,13,musi13a.png,musi13b.png,hurdy-gurdy,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,musi,6,6,17,musi17a.png,musi17b.png,hardingfele,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,musi,6,6,32,musi32a.jpeg,musi32b.png,duduk,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+finish,,,,,,,,,,,,,,,,,
