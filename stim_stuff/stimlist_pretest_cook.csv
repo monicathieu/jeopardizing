@@ -1,0 +1,8 @@
+display,randomise_trials,trial_num,pic_a.correct,pic_b.correct,object_name,pic_a.button1,pic_a.button2,pic_a.button3,pic_a.button4,pic_a.button5,pic_b.button1,pic_b.button2,pic_b.button3,pic_b.button4,pic_b.button5
+instructions,,,,,,,,,,,,,,,
+test,1,2,cook2a.jpeg,cook2b.png,blewit,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,1,3,cook3a.jpeg,cook3b.png,ramp,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,1,10,cook10a.jpeg,cook10b.jpeg,escabeche,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,1,11,cook11a.jpeg,cook11b.jpeg,galantine,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+test,1,13,cook13a.jpeg,cook13b.png,involtino,cook2a.jpeg,cook3a.jpeg,cook10a.jpeg,cook11a.jpeg,cook13a.jpeg,cook2b.png,cook3b.png,cook10b.jpeg,cook11b.jpeg,cook13b.png
+finish,,,,,,,,,,,,,,,

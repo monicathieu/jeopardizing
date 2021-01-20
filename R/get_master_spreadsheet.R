@@ -1,5 +1,8 @@
+## setup ----
+
 require(tidyverse)
 require(googledrive)
+require(magrittr)
 
 # Should download master spreadsheet to local copy for R manipulation
 # Trust me, the ID is correct
@@ -11,6 +14,8 @@ drive_download(file = as_id("1degtvNziMvUM3V7wBX6VPkYyuUsEKOezWb8VZ933Irw"),
                overwrite = TRUE)
 
 master_spreadsheet_raw <- read_csv(here::here("stim_stuff", "master_spreadsheet.csv"))
+
+## parse master spreadsheet ----
 
 master_spreadsheet <- master_spreadsheet_raw %>% 
   select(-ends_with("pretest")) %>% 
@@ -70,6 +75,8 @@ master_spreadsheet <- master_spreadsheet_raw %>%
                               test_answer),
               names_glue = "{.value}.{category_label_academic}_{category_label_nonacademic}")
 
+## pretest ----
+
 pretest <- master_spreadsheet_raw %>%
   select(trial_num, ends_with("pic_a"), ends_with("pic_b"), ends_with("pretest")) %>%
   pivot_longer(cols = -trial_num,
@@ -127,21 +134,22 @@ pretest <- master_spreadsheet_raw %>%
                          slice(rep(1, 5))),
          objects = map(objects,
                        ~.x %>% 
-                         rename_with(~paste0(., ".correct"), starts_with("pic"))),
+                         rename_with(~paste0(., ".correct"), starts_with("pic")) %>% 
+                         mutate(randomise_trials = 1,
+                                display = "test") %>% 
+                         select(display,
+                                randomise_trials,
+                                everything())),
          # paste on so each row has the correct answer and the 5 choices
-         objects = map2(objects, buttons, bind_cols)) %>% 
-  select(-buttons) %>% 
-  # so each category gets randomized together
-  # and trials are randomized within category
-  mutate(randomise_blocks = 1:n(),
-         randomise_trials = 1:n(),
-         display = "test") %>% 
-  select(category, randomise_blocks, randomise_trials, display, objects) %>% 
-  unnest(objects) %>% 
-  bind_rows(tibble(display = "instructions"),
-            .,
-            tibble(display = "finish"))
-  
+         objects = map2(objects, buttons, bind_cols),
+         objects = map(objects,
+                       ~.x %>% 
+                         bind_rows(tibble(display = "instructions"),
+                                   .,
+                                   tibble(display = "finish")))) %>% 
+  select(-buttons)
+
+## encoding ----
 
 encoding <- master_spreadsheet %>% 
   # NOT INCLUDING RANDOMISE_BLOCKS RIGHT NOW
@@ -158,6 +166,8 @@ encoding <- master_spreadsheet %>%
          starts_with("pic_a"),
          starts_with("pic_b")) %>% 
   arrange(encoding_trial_num)
+
+## retrieval_facts ----
 
 retrieval_facts_order <- list(
   tibble(randomise_blocks = 1L,
@@ -242,6 +252,8 @@ retrieval_facts <- master_spreadsheet %>%
             .,
             tibble(display = "finish"))
 
+## retrieval_pics ----
+
 retrieval_pics <- master_spreadsheet %>%
   select(trial_num,
          group,
@@ -256,6 +268,8 @@ retrieval_pics <- master_spreadsheet %>%
   bind_rows(tibble(display = "instructions"),
             .,
             tibble(display = "finish"))
+
+## retrieval_source ----
 
 retrieval_source <- master_spreadsheet %>% 
   select(encoding_trial_num,
@@ -272,8 +286,12 @@ retrieval_source <- master_spreadsheet %>%
             .,
             tibble(display = "finish"))
 
-write_csv(pretest,
-          here::here("stim_stuff", "stimlist_pretest.csv"), na = "")
+## write out csvs ----
+
+pretest %>% 
+  mutate(category = glue::glue("stimlist_pretest_{category}.csv")) %$% 
+  walk2(objects, category,
+        ~write_csv(.x, here::here("stim_stuff", .y), na = ""))
 
 encoding %>% 
   slice(1:40) %>% 

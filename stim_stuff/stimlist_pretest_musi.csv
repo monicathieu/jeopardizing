@@ -1,0 +1,8 @@
+display,randomise_trials,trial_num,pic_a.correct,pic_b.correct,object_name,pic_a.button1,pic_a.button2,pic_a.button3,pic_a.button4,pic_a.button5,pic_b.button1,pic_b.button2,pic_b.button3,pic_b.button4,pic_b.button5
+instructions,,,,,,,,,,,,,,,
+test,1,6,musi6a.png,musi6b.png,rabab,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,1,11,musi11a.jpeg,musi11b.jpeg,theorbo,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,1,13,musi13a.png,musi13b.png,hurdy-gurdy,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,1,17,musi17a.png,musi17b.png,hardingfele,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+test,1,32,musi32a.jpeg,musi32b.png,duduk,musi6a.png,musi11a.jpeg,musi13a.png,musi17a.png,musi32a.jpeg,musi6b.png,musi11b.jpeg,musi13b.png,musi17b.png,musi32b.png
+finish,,,,,,,,,,,,,,,
