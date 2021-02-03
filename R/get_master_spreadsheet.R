@@ -19,6 +19,13 @@ master_spreadsheet_raw <- read_csv(here::here("stim_stuff", "master_spreadsheet.
 
 master_spreadsheet <- master_spreadsheet_raw %>% 
   select(-ends_with("pretest")) %>% 
+  mutate(cars_mp3 = paste0("cars", 1:n(), ".mp3"),
+         cook_mp3 = paste0("cook", 1:n(), ".mp3"),
+         gems_mp3 = paste0("gems", 1:n(), ".mp3"),
+         # These three don't have scratch recording files yet
+         dino_mp3 = paste0("dino", 1:n(), ".mp3"),
+         arms_mp3 = paste0("arms", 1:n(), ".mp3"),
+         musi_mp3 = paste0("musi", 1:n(), ".mp3")) %>% 
   pivot_longer(cols = -c(trial_num:display),
                names_to = c("category", ".value"),
                names_sep = 5L) %>% 
@@ -70,6 +77,7 @@ master_spreadsheet <- master_spreadsheet_raw %>%
               # only specify it as omitted from values_from
               # and it will be implied into id_cols
               values_from = c(encoding_sentence,
+                              mp3,
                               test_question,
                               starts_with("pic"),
                               test_answer),
@@ -163,6 +171,7 @@ encoding <- master_spreadsheet %>%
          group,
          trial_num,
          starts_with("encoding_sentence"),
+         starts_with("mp3"),
          starts_with("pic_a"),
          starts_with("pic_b")) %>% 
   arrange(encoding_trial_num)
