@@ -15,17 +15,13 @@ drive_download(file = as_id("1degtvNziMvUM3V7wBX6VPkYyuUsEKOezWb8VZ933Irw"),
 
 master_spreadsheet_raw <- read_csv(here::here("stim_stuff", "master_spreadsheet.csv"))
 
+durations <- read_csv(here::here("ignore", "narration", "durations_parsed.csv"))
+
 ## parse master spreadsheet ----
 
 master_spreadsheet <- master_spreadsheet_raw %>% 
   select(-ends_with("pretest")) %>% 
-  mutate(cars_mp3 = paste0("cars", 1:n(), ".mp3"),
-         cook_mp3 = paste0("cook", 1:n(), ".mp3"),
-         gems_mp3 = paste0("gems", 1:n(), ".mp3"),
-         # These three don't have scratch recording files yet
-         dino_mp3 = paste0("dino", 1:n(), ".mp3"),
-         arms_mp3 = paste0("arms", 1:n(), ".mp3"),
-         musi_mp3 = paste0("musi", 1:n(), ".mp3")) %>% 
+  left_join(durations, by = "trial_num") %>% 
   pivot_longer(cols = -c(trial_num:display),
                names_to = c("category", ".value"),
                names_sep = 5L) %>% 
@@ -77,7 +73,8 @@ master_spreadsheet <- master_spreadsheet_raw %>%
               # only specify it as omitted from values_from
               # and it will be implied into id_cols
               values_from = c(encoding_sentence,
-                              mp3,
+                              starts_with("mp3"),
+                              starts_with("wait_duration"),
                               test_question,
                               starts_with("pic"),
                               test_answer),
@@ -173,7 +170,9 @@ encoding <- master_spreadsheet %>%
          starts_with("encoding_sentence"),
          starts_with("mp3"),
          starts_with("pic_a"),
-         starts_with("pic_b")) %>% 
+         starts_with("pic_b"),
+         starts_with("mp3"),
+         starts_with("wait_duration")) %>% 
   arrange(encoding_trial_num)
 
 ## retrieval_facts ----
