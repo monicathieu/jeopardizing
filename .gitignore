@@ -40,5 +40,8 @@ vignettes/*.pdf
 rsconnect/
 .Rproj.user
 
+# Folder of stuff not to sync, obvi
+ignore/*
+
 # Please never come back again
 *.DS_Store
