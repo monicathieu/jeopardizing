@@ -36,3 +36,11 @@ encoding %>%
             .,
             tibble(display = "finish_firsthalf")) %>% 
   write_csv(here::here("stim_stuff", "stimlist_encoding_firsthalf.csv"), na = "")
+
+encoding %>% 
+  slice(41:80) %>% 
+  mutate(display = "memorise_secondhalf") %>% 
+  bind_rows(tibble(display = "instructions_secondhalf"),
+            .,
+            tibble(display = "finish_secondhalf")) %>% 
+  write_csv(here::here("stim_stuff", "stimlist_encoding_secondhalf.csv"), na = "")

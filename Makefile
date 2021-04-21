@@ -18,6 +18,7 @@ stim_stuff/master_spreadsheet_parsed.csv: R/get_master_spreadsheet.R \
 	Rscript -e 'source("$<"); parse_master_spreadsheet()'
 
 ignore/narration/durations_parsed.csv: R/parse_narr_durations.R ignore/narration/durations.txt
+	Rscript -e 'source("$<")'
 
 ignore/narration/durations.txt: shell/get_narr_durations.sh ignore/narration/renamed/*
 	$<
