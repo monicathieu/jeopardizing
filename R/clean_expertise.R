@@ -2,6 +2,8 @@ require(tidyverse)
 require(magrittr)
 source(here::here("R", "utils_read_gorilla.R"))
 
+## reading in and cleaning ----
+
 raw <- list.files(here::here("ignore", "data", "raw"), recursive = T, full.names = T) %>% 
   read_gorilla_data("task-v9u2")
 
@@ -25,14 +27,11 @@ less_raw <- raw %>%
   # stuff to pull only the row of scale trials where the slider stopped moving
   nest(data = -c(subj_num, trial_num, trial_screen)) %>%
   pivot_wider(names_from = trial_screen, values_from = data) %>% 
-  mutate(confidence = map(confidence,
+  mutate(confidence = map(confidence, ~.x %>% 
+                            mutate(resp = as.integer(resp)) %>% 
+                            get_slider_rt()),
+         confidence = map(confidence,
                           ~.x %>%
-                            mutate(trial_num_within = 1:nrow(.),
-                                   resp = as.integer(resp),
-                                   resp_diff = c(diff(resp), NA_integer_),
-                                   resp_diff = coalesce(resp_diff, 0L)) %>%
-                            # this SHOULD keep one row per trial and also keep no responses
-                            filter(trial_num_within == min(trial_num_within[resp_diff == 0])) %>% 
                             select(resp, rt, timeout) %>% 
                             rename_with(~paste0(., "_conf"), everything())),
          recall = map(recall, ~.x %>%
@@ -40,6 +39,22 @@ less_raw <- raw %>%
                         mutate(rt = if_else(!is.na(timeout), 15000, rt)) %>% 
                         rename_with(~paste0(., "_recall"), c(resp, rt, timeout)))) %>%
   unnest(c(recall, confidence)) %>% 
-  mutate(acc_recall_rough = map2_lgl(resp_recall, answer, grepl, ignore.case = TRUE))
+  mutate(acc_recall_rough = map2_lgl(resp_recall, answer,
+                                     ~(grepl(.x, .y, ignore.case = T) | grepl(.y, .x, ignore.case = T)) %>% 
+                                       coalesce(FALSE)))
 
-write_csv(less_raw, file = here::here("ignore", "data", "task_jeopardy_recall.csv"))
+## scoring some by hand----
+
+less_raw %>%
+  arrange(answer) %>%
+  select(subj_num, resp_recall, answer, acc_recall_rough, question, everything())
+
+scored <- less_raw %>% 
+  mutate(acc_recall = case_when(
+    answer == "Andrea Bocelli" & grepl("Bocelli", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "SF Giants" & grepl("Giants", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "Spanish-American War" & grepl("Spanish American", resp_recall, ignore.case = T) ~ TRUE,
+    TRUE ~ acc_recall_rough
+  ))
+
+write_csv(scored, file = here::here("ignore", "data", "task_jeopardy_recall.csv"))
