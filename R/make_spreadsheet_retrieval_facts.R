@@ -8,6 +8,7 @@ master_spreadsheet <- read_csv(here::here("stim_stuff", "master_spreadsheet_pars
 ## format spreadsheet ----
 
 retrieval_facts_order <- list(
+  # 1-4: same episodic same semantic
   tibble(randomise_blocks = 1L,
          block_trial_num = 1:5,
          group = rep("academic", 5),
@@ -24,6 +25,7 @@ retrieval_facts_order <- list(
          block_trial_num = 1:5,
          group = rep("nonacademic", 5),
          encoding_block = rep("late", 5)),
+  # 5-8: same episodic different semantic
   tibble(randomise_blocks = rep(5:6, each = 5),
          block_trial_num = rep(1:5, 2),
          group = rep(c("academic", "nonacademic"), 5),
@@ -32,6 +34,7 @@ retrieval_facts_order <- list(
          block_trial_num = rep(1:5, 2),
          group = rep(c("academic", "nonacademic"), 5),
          encoding_block = rep("late", 10)),
+  # 9-12: different episodic same semantic
   tibble(randomise_blocks = rep(9:10, each = 5),
          block_trial_num = rep(1:5, 2),
          group = rep("academic", 10),
@@ -40,6 +43,7 @@ retrieval_facts_order <- list(
          block_trial_num = rep(1:5, 2),
          group = rep("nonacademic", 10),
          encoding_block = rep(c("early", "late"), 5)),
+  # 12-16: different episodic different semantic
   tibble(randomise_blocks = rep(13:14, each = 5),
          block_trial_num = rep(1:5, 2),
          group = rep(c("academic", "nonacademic"), 5),
