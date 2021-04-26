@@ -8,7 +8,8 @@ get_slider_rt <- function (df) {
            resp_diff = c(diff(resp), NA_integer_),
            resp_diff = coalesce(resp_diff, 0L)) %>%
     # this SHOULD keep one row per trial and also keep no responses
-    filter(trial_num_within == min(trial_num_within[resp_diff == 0]))
+    filter(trial_num_within == min(trial_num_within[resp_diff == 0])) %>% 
+    select(-trial_num_within, -resp_diff)
   
   return (out)
 }
