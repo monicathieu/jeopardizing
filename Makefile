@@ -14,6 +14,7 @@ stim_stuff/stimlist_pretest_*.csv: R/make_spreadsheet_pretest.R \
 	Rscript -e 'source("$<")'
 
 stim_stuff/master_spreadsheet_parsed.csv: R/get_master_spreadsheet.R \
+											stim_stuff/master_spreadsheet.csv \
 										  ignore/narration/durations_parsed.csv
 	Rscript -e 'source("$<"); parse_master_spreadsheet()'
 
