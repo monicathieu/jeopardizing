@@ -1,0 +1,156 @@
+---
+title: "JStudy exploratory data analysis"
+author: "Monica Thieu"
+date: "4/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(tidyverse)
+require(magrittr)
+j_recall <- read_csv(here::here("ignore", "data", "task_jeopardy_recall.csv"))
+j_meta <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_states.csv"))
+encoding <- read_csv(here::here("ignore", "data", "task_encoding.csv"))
+r_facts <- read_csv(here::here("ignore", "data", "task_retrieval_facts.csv"))
+r_pics <- read_csv(here::here("ignore", "data", "task_retrieval_pics.csv"))
+r_source <- read_csv(here::here("ignore", "data", "task_retrieval_source.csv"))
+q_demos  <- read_csv(here::here("ignore", "data", "q_trivia_demos.csv"))
+q_posttask  <- read_csv(here::here("ignore", "data", "q_posttask.csv"))
+```
+
+## Trivia expertise
+
+```{r}
+j_recall %>% 
+  group_by(subj_num) %>% 
+  summarize(score = mean(acc_recall))
+```
+
+```{r}
+j_recall %>% 
+  mutate(acc_recall = as.integer(acc_recall),
+         resp_conf = (resp_conf - 50) / 100) %>% 
+  glm(acc_recall ~ resp_conf, family = "binomial", data = .) %>% 
+  summary()
+```
+
+```{r}
+j_recall %>% 
+  group_by(subj_num) %>% 
+  ggplot(aes(x = resp_conf, y = as.integer(acc_recall))) + 
+  geom_point() + 
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) + 
+  facet_wrap(~subj_num)
+```
+
+## Metamemory states
+
+```{r}
+j_meta %>%
+  left_join(j_recall %>% select(subj_num, answer, acc_recall)) %>% 
+  filter(acc_recall) %>% 
+  ggplot(aes(x = factor(subj_num), fill = resp)) +
+  geom_bar()
+```
+
+```{r}
+j_meta %>%
+  left_join(j_recall %>% select(subj_num, answer, acc_recall)) %>% 
+  filter(acc_recall) %>% 
+  count(subj_num, resp) %>% 
+  group_by(subj_num) %>% 
+  mutate(prob = n / sum(n)) %>% 
+  ggplot(aes(x = factor(subj_num), y = prob, fill = resp)) +
+  geom_col()
+```
+```{r}
+j_meta %>%
+  left_join(j_recall %>% select(subj_num, answer, acc_recall)) %>% 
+  filter(!acc_recall) %>% 
+  ggplot(aes(x = factor(subj_num), fill = resp)) +
+  geom_bar()
+```
+
+
+
+### Museum task retrieval
+
+```{r}
+r_pics %>%
+  ggplot(aes(x = resp, fill = factor(is_old))) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 20) + facet_wrap(~ subj_num)
+```
+
+
+```{r}
+r_source %>%
+  ggplot(aes(x = resp, fill = factor(encoding_block))) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 20) + facet_wrap(~ subj_num)
+```
+
+### Source helpage
+
+```{r}
+retrieval <- r_facts %>%
+  select(subj_num, group, group_trial_num, retrieval_block, retrieval_trial_num, category, acc_recall, rt_recall = rt) %>% 
+  left_join(r_pics %>%
+              mutate(resp = resp - 50,
+                     acc = if_else(is_old == resp_binary, abs(resp), -abs(resp))) %>%
+              select(subj_num, group, group_trial_num, category, pic_is_old = is_old, acc_pic = acc, rt_pic = rt)) %>% 
+  left_join(r_source %>%
+              mutate(resp = resp - 50,
+                     acc = if_else(encoding_block == resp_binary, abs(resp), -abs(resp))) %>%
+              select(subj_num, group, group_trial_num, category, acc_source = acc, rt_source = rt)) %>%
+  left_join(encoding %>% 
+              select(subj_num, group, group_trial_num, category, interest = resp)) %>% 
+  mutate(retrieval_block = case_when(retrieval_block <= 4 ~ "ep_same_sem_same",
+                                     retrieval_block <= 8 ~ "ep_same_sem_diff",
+                                     retrieval_block <= 12 ~ "ep_diff_sem_same",
+                                     retrieval_block <= 16 ~ "ep_diff_sem_diff",
+                                     TRUE ~ NA_character_))
+```
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = interest, y = acc_recall)) + 
+  geom_point() + 
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) + 
+  facet_wrap(~subj_num)
+```
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = acc_pic, y = acc_recall)) + 
+  geom_point() + 
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) + 
+  facet_wrap(~subj_num)
+```
+
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = acc_source, y = acc_recall)) + 
+  geom_point() + 
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) + 
+  facet_wrap(~subj_num)
+```
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = interest, y = acc_source)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num)
+```
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = acc_source, y = acc_pic)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num)
+```
