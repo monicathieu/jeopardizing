@@ -18,7 +18,6 @@ less_raw <- raw %>%
          encoding_block,
          group_trial_num = trial_num,
          retrieval_trial_num = `Trial Number`,
-         retrieval_block = randomise_blocks,
          trial_screen = `Screen Name`,
          zone = `Zone Name`,
          rt = `Reaction Time`,
@@ -36,7 +35,6 @@ less_raw <- raw %>%
   mutate(data = map2(data, categories,
                      ~.x %>% select(group,
                                     group_trial_num,
-                                    retrieval_block,
                                     retrieval_trial_num,
                                     resp,
                                     rt,
@@ -47,7 +45,13 @@ less_raw <- raw %>%
   select(-c(category1, category2, categories)) %>%
   mutate(acc_recall_rough = map2_lgl(resp, test_answer,
                                      ~(grepl(.x, .y, ignore.case = TRUE) | grepl(.y, .x, ignore.case = TRUE)) %>% 
-                                       coalesce(FALSE)))
+                                       coalesce(FALSE)),
+         encoding_is_late = if_else(group_trial_num <= 20, 0L, 1L)) %>% 
+  group_by(subj_num) %>% 
+  mutate(retrieval_block = rep(1:16, each = 5)) %>% 
+  group_by(subj_num, retrieval_block) %>% 
+  mutate(ep_is_same = if_else(length(unique(encoding_is_late)) == 1, 1L, 0L),
+         sem_is_same = if_else(length(unique(group)) == 1, 1L, 0L))
 
 ## scoring some by hand----
 
