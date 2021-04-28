@@ -74,7 +74,7 @@ j_meta %>%
 
 
 
-### Museum task retrieval
+## Museum task retrieval
 
 ```{r}
 r_pics %>%
@@ -93,7 +93,7 @@ r_source %>%
 
 ```{r}
 retrieval <- r_facts %>%
-  select(subj_num, group, group_trial_num, retrieval_block, retrieval_trial_num, category, acc_recall, rt_recall = rt) %>% 
+  select(subj_num, group, group_trial_num, retrieval_block, ep_is_same, sem_is_same, retrieval_trial_num, category, acc_recall, rt_recall = rt) %>% 
   left_join(r_pics %>%
               mutate(resp = resp - 50,
                      acc = if_else(is_old == resp_binary, abs(resp), -abs(resp))) %>%
@@ -104,12 +104,39 @@ retrieval <- r_facts %>%
               select(subj_num, group, group_trial_num, category, acc_source = acc, rt_source = rt)) %>%
   left_join(encoding %>% 
               select(subj_num, group, group_trial_num, category, interest = resp)) %>% 
-  mutate(retrieval_block = case_when(retrieval_block <= 4 ~ "ep_same_sem_same",
-                                     retrieval_block <= 8 ~ "ep_same_sem_diff",
-                                     retrieval_block <= 12 ~ "ep_diff_sem_same",
-                                     retrieval_block <= 16 ~ "ep_diff_sem_diff",
-                                     TRUE ~ NA_character_))
+  mutate(retrieval_block_type = case_when(retrieval_block <= 4 ~ "ep_same_sem_same",
+                                          retrieval_block <= 8 ~ "ep_same_sem_diff",
+                                          retrieval_block <= 12 ~ "ep_diff_sem_same",
+                                          retrieval_block <= 16 ~ "ep_diff_sem_diff",
+                                          TRUE ~ NA_character_))
 ```
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = retrieval_trial_num, y = acc_recall)) +
+  geom_rect(aes(x = NULL, y = NULL, xmin = xmin, xmax = xmax, fill = interaction(ep_is_same, sem_is_same)),
+            data = retrieval %>%
+              select(subj_num, retrieval_block, retrieval_trial_num, ep_is_same, sem_is_same) %>%
+              group_by(subj_num, retrieval_block) %>%
+              filter(retrieval_trial_num %in% range(retrieval_trial_num)) %>%
+              mutate(xtype = if_else(retrieval_trial_num == min(retrieval_trial_num), "xmin", "xmax")) %>%
+              ungroup() %>%
+              pivot_wider(names_from = xtype, values_from = retrieval_trial_num) %>% 
+              mutate(xmin = xmin - 0.5,
+                     xmax = xmax + 0.5),
+            ymin = 0, ymax = 1, alpha = 0.5) +
+  geom_line() +
+  geom_point(aes(color = retrieval_block)) +
+  scale_colour_viridis_b() +
+  facet_grid(subj_num ~ .)
+```
+
+```{r}
+retrieval %>% 
+  group_by(subj_num, ep_is_same, sem_is_same) %>% 
+  summarize(mean_acc = mean(acc_recall))
+```
+
 
 ```{r}
 retrieval %>% 
