@@ -1,6 +1,24 @@
 require(tidyverse)
 require(magrittr)
 
+get_typing_rts <- function (df) {
+  out <- df %>% 
+    mutate(timeout = if_else(any(!is.na(timeout)), 1L, NA_integer_))
+  if (nrow(df) > 1) {
+    out %<>% 
+      mutate(rt_type = c("start", "end"), resp = tail(resp, 1)) %>%
+      pivot_wider(names_from = rt_type, values_from = rt, names_prefix = "rt_")
+  } else {
+    out %<>%
+      rename(rt_end = rt) %>% 
+      mutate(rt_start = NA_real_)
+  }
+  out %<>% 
+    mutate(rt_end = if_else(!is.na(timeout), 15000, rt_end))
+  
+  return (out)
+}
+
 get_slider_rt <- function (df) {
   # stuff to pull only the row of scale trials where the slider stopped moving
   out <- df %>% 
