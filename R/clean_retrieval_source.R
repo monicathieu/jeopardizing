@@ -39,7 +39,8 @@ less_raw <- raw %>%
   unnest(data) %>% 
   mutate(category = if_else(group == "academic", category1, category2),
          encoding_block = if_else(group_trial_num <= 20, 0L, 1L),
-         resp_binary = if_else(resp > 50, 1L, 0L)) %>% 
+         resp = if_else(encoding_block == 1, resp - 50, -(resp - 50)),
+         resp_binary = if_else(resp > 0, 1L, 0L)) %>% 
   select(-c(category1, category2, categories))
 
 write_csv(less_raw, file = here::here("ignore", "data", "task_retrieval_source.csv"))
