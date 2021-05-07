@@ -34,27 +34,39 @@ less_raw <- raw %>%
                           ~.x %>%
                             select(resp, rt, timeout) %>% 
                             rename_with(~paste0(., "_conf"), everything())),
-         recall = map(recall, ~.x %>%
+         recall = map(recall, ~.x %>% 
                         select(-zone) %>% 
-                        mutate(rt = if_else(!is.na(timeout), 15000, rt)) %>% 
-                        rename_with(~paste0(., "_recall"), c(resp, rt, timeout)))) %>%
+                        get_typing_rts() %>% 
+                        rename_with(~paste0(., "_recall"), c(resp, rt_start, rt_end, timeout)))) %>%
   unnest(c(recall, confidence)) %>% 
   mutate(acc_recall_rough = map2_lgl(resp_recall, answer,
-                                     ~(grepl(.x, .y, ignore.case = T) | grepl(.y, .x, ignore.case = T)) %>% 
-                                       coalesce(FALSE)))
+                                     function (a, b) {
+                                       # trim non alpha nums in response in case they make grepl yell
+                                       a <- str_remove_all(a, "[^a-zA-Z\\d\\s-]")
+                                       out <- (grepl(a, b, ignore.case = T) | grepl(b, a, ignore.case = T)) %>% 
+                                         coalesce(FALSE)
+                                       
+                                       return (out)
+                                     }
+                                     ))
 
 ## scoring some by hand----
 
-less_raw %>%
-  arrange(answer) %>%
-  select(subj_num, resp_recall, answer, acc_recall_rough, question, everything())
-
 scored <- less_raw %>% 
   mutate(acc_recall = case_when(
-    answer == "Andrea Bocelli" & grepl("Bocelli", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "Andrea Bocelli" & grepl("Boccelli", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "Andrea Bocelli" & grepl("vocelli", resp_recall, ignore.case = T) ~ TRUE,
     answer == "SF Giants" & grepl("Giants", resp_recall, ignore.case = T) ~ TRUE,
     answer == "Spanish-American War" & grepl("Spanish American", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "Yosemite National Park" & grepl("Josemite", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "The Faerie Queene" & grepl("fairee queen", resp_recall, ignore.case = T) ~ TRUE,
+    answer == "Libra" & tolower(resp_recall) == "li" ~ FALSE,
+    answer == "John the Baptist" & tolower(resp_recall) == "john" ~ FALSE,
     TRUE ~ acc_recall_rough
   ))
+
+scored %>%
+  arrange(answer) %>%
+  select(subj_num, resp_recall, answer, acc_recall_rough, acc_recall, question, everything())
 
 write_csv(scored, file = here::here("ignore", "data", "task_jeopardy_recall.csv"))
