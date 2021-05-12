@@ -1,11 +1,12 @@
 ---
-title: "JStudy exploratory data analysis"
-subtitle: "with xaringan"
+title: "Exploratory data analysis"
+subtitle: "J-Study"
 author: "Monica Thieu & Lauren Wilkins"
 institute: "Columbia University Dept of Psychology"
 date: "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
+    css: ["theme.css", "fonts.css"]
     lib_dir: libs
     nature:
       highlightStyle: github
@@ -28,6 +29,9 @@ j_recall %<>%
   mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
 
 j_meta <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_states.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+j_meta_desc <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_descriptions.csv")) %>% 
   left_join(j_exp, by = "subj_num") %>% 
   mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
 encoding <- read_csv(here::here("ignore", "data", "task_encoding.csv")) %>% 
@@ -58,6 +62,8 @@ class: inverse, middle
 
 ---
 
+### Do Ps accurately assess their own trivia skill?
+
 ```{r}
 q_demos %>% 
   ggplot(aes(x = trivia_skill_self, y = j_score)) +
@@ -69,7 +75,7 @@ q_demos %>%
 
 ---
 
-## Trivia recall by confidence
+### Trivia recall by confidence
 
 ```{r}
 j_recall %>% 
@@ -84,7 +90,7 @@ j_recall %>%
 
 ---
 
-## Metamemory state counts
+### Metamemory state counts
 
 ```{r}
 j_meta %>%
@@ -102,7 +108,7 @@ j_meta %>%
 
 ---
 
-## Metamemory state relative percentages
+### Metamemory state relative percentages
 
 ```{r}
 j_meta %>%
@@ -123,13 +129,65 @@ j_meta %>%
 
 ---
 
+### Metamemory descriptions: Guess
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Guess") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+### Metamemory descriptions: Just Know
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Just Know") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+### Metamemory descriptions: Related Memory
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Related Memory") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+### Metamemory descriptions: Learning Memory
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Learning Memory") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
 class: inverse, middle
 
 # Museum task retrieval
 
 ---
 
-## Fact recall as a function of question order/chunk type
+### Fact recall by question order/chunk type
 
 ```{r}
 r_facts %>% 
@@ -162,7 +220,7 @@ r_facts %>%
 
 ---
 
-## Fact recall by chunk type
+### Fact recall by chunk type
 
 ```{r}
 r_facts %>% 
@@ -187,7 +245,7 @@ r_facts %>%
 
 ---
 
-## Photo recognition
+### Photo recognition
 
 Old setup: A-B' old-new recognition with similar lures as foils
 
@@ -217,7 +275,9 @@ r_pics_oldnew %>%
 
 ---
 
-### Current setup: A-A' 2AFC with similar lure
+### Photo recognition
+
+Current setup: A-A' 2AFC with similar lure
 
 ```{r}
 r_pics_2afc %>%
@@ -247,7 +307,9 @@ r_source %>%
 
 ---
 
-### Source helpage
+class: inverse, middle
+
+# Retrieval between-task relationships
 
 ```{r}
 retrieval <- r_facts %>%
@@ -269,7 +331,7 @@ retrieval <- r_facts %>%
 
 ---
 
-### Does successful photo retrieval predict successful fact retrieval?
+### Does _photo_ retrieval predict _fact_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -285,7 +347,7 @@ retrieval %>%
 
 ---
 
-### Does successful source retrieval predict successful fact retrieval?
+### Does _source_ retrieval predict _fact_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -301,7 +363,23 @@ retrieval %>%
 
 ---
 
-### Does interest at encoding predict successful _fact_ retrieval?
+### Does _source_ retrieval predict _photo_ retrieval?
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = resp_source, y = resp_pic, color = j_score, fill = j_score)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num) +
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Source recognition accuracy", y = "Photo recognition accuracy") +
+  theme_bw()
+```
+
+---
+
+### Does interest at encoding predict _fact_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -317,7 +395,7 @@ retrieval %>%
 
 ---
 
-### Does interest at encoding predict successful _photo_ retrieval?
+### Does interest at encoding predict _photo_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -333,7 +411,7 @@ retrieval %>%
 
 ---
 
-### Does interest at encoding predict successful _source_ retrieval?
+### Does interest at encoding predict _source_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -349,19 +427,9 @@ retrieval %>%
 
 ---
 
-### Does successful _source_ retrieval predict successful _photo_ retrieval?
+class: inverse, middle
 
-```{r}
-retrieval %>% 
-  ggplot(aes(x = resp_source, y = resp_pic, color = j_score, fill = j_score)) + 
-  geom_point() + 
-  geom_smooth(method = "lm") + 
-  facet_wrap(~subj_num) +
-  scale_color_viridis_c() +
-  scale_fill_viridis_c() +
-  labs(x = "Source recognition accuracy", y = "Photo recognition accuracy") +
-  theme_bw()
-```
+# STOP! Dirty graphs ahead
 
 ---
 

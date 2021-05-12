@@ -1,0 +1,9 @@
+@import url(https://fonts.googleapis.com/css?family=Nunito:wght@400;600;700);
+@import url(https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700);
+@import url(https://fonts.googleapis.com/css?family=Fira+Code:wght@400;700);
+
+body { font-family: 'Lora', serif; }
+h1, h2, h3 {
+  font-family: 'Nunito', cursive;
+}
+.remark-code, .remark-inline-code { font-family: 'Fira Code', monospace; }

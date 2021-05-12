@@ -40,6 +40,9 @@ vignettes/*.pdf
 rsconnect/
 .Rproj.user
 
+# Xaringan presentation files that can be regenerated?
+slides/*/*
+
 # Folder of stuff not to sync, obvi
 ignore/*
 
