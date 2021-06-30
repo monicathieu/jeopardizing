@@ -2,7 +2,7 @@ require(tidyverse)
 require(magrittr)
 source(here::here("R", "utils_read_gorilla.R"))
 
-raw <- list.files(here::here("ignore", "data", "raw"), recursive = T, full.names = T) %>% 
+raw <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T) %>% 
   read_gorilla_data("task-wlkb")
 
 less_raw <- raw %>% 
@@ -14,7 +14,9 @@ less_raw <- raw %>%
          resp = `Response`,
          timeout = `Timed Out`,
          question,
-         answer)
+         answer) %>% 
+  mutate(question = str_replace(question, "1890", "1899"),
+         answer = if_else(answer == "SF Giants", "San Francisco Giants", answer))
 
 mem_states <- less_raw %>%
   filter(trial_screen == "recall") %>% 

@@ -2,7 +2,7 @@ require(tidyverse)
 require(magrittr)
 source(here::here("R", "utils_read_gorilla.R"))
 
-raw <- list.files(here::here("ignore", "data", "raw"), recursive = T, full.names = T) %>% 
+raw <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T) %>% 
   read_gorilla_data("task-3n9k|task-cuj6")
 
 pretest <- read_csv(here::here("ignore", "data", "task_pretest.csv")) %>%
@@ -20,7 +20,7 @@ less_raw <- raw %>%
          resp = `Response`,
          timeout = `Timed Out`,
          encoding_pic = `counterbalance-mqv3`,
-         retrieval_pic_oldnew = `counterbalance-ekxi`,
+         # retrieval_pic_oldnew = `counterbalance-ekxi`,
          retrieval_pic_2afc = `randomiser-snec`,
          starts_with("pic_c"),
          starts_with("pic_d")) %>% 
@@ -44,18 +44,6 @@ less_raw <- raw %>%
                                     pic_d = paste0("pic_d.", .y)))) %>%
   unnest(data)
 
-d_oldnew <- less_raw %>% 
-  filter(is.na(retrieval_pic_2afc)) %>% 
-  mutate(category = if_else(group == "academic", category1, category2),
-         pic_shown = if_else(retrieval_pic_oldnew == "c", pic_c, pic_d),
-         resp_binary = if_else(resp > 50, 1L, 0L)) %>% 
-  separate(pic_shown, into = c("pic_shown", NA)) %>% 
-  separate(pic_shown, into = c(NA, "group_trial_num", "is_old"), sep = c(4L, -1L), convert = TRUE) %>% 
-  mutate(is_old = if_else(is_old == encoding_pic, 1L, 0L),
-         resp = if_else(is_old == 1, resp - 50, -(resp - 50)),
-         resp_binary = if_else(resp > 0, 1L, 0L)) %>% 
-  select(-c(trial_num, category1, category2, categories, pic_c, pic_d, encoding_pic, starts_with("retrieval_pic")))
-
 d_2afc <- less_raw %>% 
   filter(!is.na(retrieval_pic_2afc)) %>% 
   mutate(category = if_else(group == "academic", category1, category2),
@@ -67,6 +55,19 @@ d_2afc <- less_raw %>%
          resp_binary = if_else(resp > 0, 1L, 0L)) %>% 
   select(-c(trial_num, category1, category2, categories, pic_c, pic_d, encoding_pic, starts_with("retrieval_pic")))
 
-write_csv(d_oldnew, file = here::here("ignore", "data", "task_retrieval_pics_oldnew.csv"))
-
 write_csv(d_2afc, file = here::here("ignore", "data", "task_retrieval_pics.csv"))
+
+## old code from the old new version in piloting ----
+# d_oldnew <- less_raw %>% 
+#   filter(is.na(retrieval_pic_2afc)) %>% 
+#   mutate(category = if_else(group == "academic", category1, category2),
+#          pic_shown = if_else(retrieval_pic_oldnew == "c", pic_c, pic_d),
+#          resp_binary = if_else(resp > 50, 1L, 0L)) %>% 
+#   separate(pic_shown, into = c("pic_shown", NA)) %>% 
+#   separate(pic_shown, into = c(NA, "group_trial_num", "is_old"), sep = c(4L, -1L), convert = TRUE) %>% 
+#   mutate(is_old = if_else(is_old == encoding_pic, 1L, 0L),
+#          resp = if_else(is_old == 1, resp - 50, -(resp - 50)),
+#          resp_binary = if_else(resp > 0, 1L, 0L)) %>% 
+#   select(-c(trial_num, category1, category2, categories, pic_c, pic_d, encoding_pic, starts_with("retrieval_pic")))
+
+# write_csv(d_oldnew, file = here::here("ignore", "data", "task_retrieval_pics_oldnew.csv"))

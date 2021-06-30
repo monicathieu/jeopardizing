@@ -2,7 +2,7 @@ require(tidyverse)
 require(magrittr)
 source(here::here("R", "utils_read_gorilla.R"))
 
-raw <- list.files(here::here("ignore", "data", "raw"), recursive = T, full.names = T) %>% 
+raw <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T) %>% 
   read_gorilla_data("task-4elo")
 
 less_raw <- raw %>% 
