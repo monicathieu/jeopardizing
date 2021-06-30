@@ -1,0 +1,162 @@
+---
+title: "scratch simulations"
+author: "Monica Thieu"
+date: "4/9/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(tidyverse)
+require(magrittr)
+j_recall <- read_csv(here::here("ignore", "data", "task_jeopardy_recall.csv"))
+
+j_exp <- j_recall %>% 
+  group_by(subj_num) %>% 
+  summarize(j_score = mean(acc_recall))
+
+j_recall %<>%
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+
+j_meta <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_states.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+j_meta_desc <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_descriptions.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+encoding <- read_csv(here::here("ignore", "data", "task_encoding.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+r_facts <- read_csv(here::here("ignore", "data", "task_retrieval_facts.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+r_pics <- read_csv(here::here("ignore", "data", "task_retrieval_pics.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+r_source <- read_csv(here::here("ignore", "data", "task_retrieval_source.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+q_demos  <- read_csv(here::here("ignore", "data", "q_trivia_demos.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+
+retrieval <- r_facts %>%
+  select(subj_num, j_score, group, group_trial_num, retrieval_block, ep_is_same, sem_is_same, retrieval_trial_num, category, acc_recall, rt_start_recall = rt_start, rt_end_recall = rt_end) %>% 
+  left_join(r_pics %>% 
+              select(subj_num, group, group_trial_num, category, resp_pic = resp, rt_pic = rt)) %>% 
+  left_join(r_source %>%
+              select(subj_num, group, group_trial_num, category, resp_source = resp, rt_source = rt)) %>%
+  left_join(encoding %>% 
+              select(subj_num, group, group_trial_num, category, interest = resp)) %>% 
+  mutate(retrieval_block_type = case_when(retrieval_block <= 4 ~ "ep_same_sem_same",
+                                          retrieval_block <= 8 ~ "ep_same_sem_diff",
+                                          retrieval_block <= 12 ~ "ep_diff_sem_same",
+                                          retrieval_block <= 16 ~ "ep_diff_sem_diff",
+                                          TRUE ~ NA_character_))
+```
+
+```{r}
+stuff <- tibble(id = 1:20) %>%
+  mutate(if_else(id %% 2 == 0, "trivia", "control"))
+```
+
+# Just Jeopardy pre-test expertise
+
+## Parameter recovery within subject
+
+```{r}
+j_recall %>% 
+  ggplot(aes(x = resp_conf)) +
+  geom_histogram() +
+  facet_wrap(~subj_num)
+```
+
+
+```{r}
+j_recall %>% 
+  mutate(acc_recall = as.integer(acc_recall),
+         resp_conf = resp_conf / 100) %>% 
+  nest(data = -c(subj_num, j_score)) %>% 
+  mutate(coefs = map(data, ~glm(acc_recall ~ resp_conf, family = binomial(link = "logit"), data = .) %>% 
+                       broom::tidy()
+                       )) %>% 
+  select(-data) %>% 
+  unnest(coefs) %>% 
+  select(-statistic, -p.value) %>% 
+  mutate(term = recode(term, `(Intercept)` = "intercept"))
+```
+
+
+# Museum task
+
+## Interest ratings
+
+### INTERACTION: Does retrieval ~ encoding interest depend on expertise?
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = interest, y = acc_recall, color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Interest in fact at encoding", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall),
+         interest = (interest - 50) / 100) %>% 
+  nest(data = -c(subj_num, j_score)) %>% 
+  mutate(model = map(data, ~glm(acc_recall ~ interest, family = binomial(link = "logit"), data = .)),
+         coefs = map(model, broom::tidy)) %>% 
+  select(subj_num, j_score, coefs) %>% 
+  unnest() %>% 
+  select(-statistic, -p.value) %>% 
+  mutate(term = recode(term, `(Intercept)` = "intercept")) %>% 
+  pivot_wider(names_from = term, values_from = c(estimate, std.error)) %>% 
+  ggplot(aes(x = estimate_interest, y = std.error_interest, color = j_score)) +
+  geom_point() +
+  scale_colour_viridis_c()
+```
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall),
+         interest = (interest - 50) / 100) %>% 
+  nest(data = -c(subj_num, j_score)) %>% 
+  mutate(model = map(data, ~glm(acc_recall ~ interest, family = binomial(link = "logit"), data = .)),
+         coefs = map(model, broom::tidy)) %>% 
+  select(subj_num, j_score, coefs) %>% 
+  unnest() %>% 
+  select(-statistic, -p.value) %>% 
+  mutate(term = recode(term, `(Intercept)` = "intercept")) %>% 
+  pivot_wider(names_from = term, values_from = c(estimate, std.error)) %>% 
+  ggplot(aes(x = estimate_interest, y = std.error_interest)) +
+  geom_point()
+```
+
+P(correct recall for given subject) ~ invlogit(intercept fixed + intercept random + interest + j)
+
+```{r}
+glmer_retrieval_by_interest_expertise <- retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall),
+         interest = (interest - 50) / 100,
+         j_score = j_score - 0.5) %>% 
+  lme4::glmer(acc_recall ~ interest * j_score + (1 | subj_num),
+              family = binomial(link = "logit"),
+              data = .)
+
+coefs_retrieval_by_interest_expertise <- glmer_retrieval_by_interest_expertise %>%
+  broom.mixed::tidy() %>%
+  select(effect:estimate)
+```
+
+```{r}
+
+```
+
+### 
