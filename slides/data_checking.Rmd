@@ -1,0 +1,484 @@
+---
+title: "Exploratory data analysis"
+subtitle: "J-Study"
+author: "Monica Thieu & Lauren Wilkins"
+institute: "Columbia University Dept of Psychology"
+date: "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    css: ["theme.css", "fonts.css"]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, dev = "svglite", message = FALSE, warning = FALSE, fig.asp = 3/4)
+require(tidyverse)
+require(magrittr)
+j_recall <- read_csv(here::here("ignore", "data", "task_jeopardy_recall.csv")) %>% 
+  mutate(resp_conf = if_else(is.na(resp_recall), NA_real_, resp_conf))
+
+j_exp <- j_recall %>% 
+  group_by(subj_num) %>% 
+  summarize(j_score = mean(acc_recall))
+
+j_recall %<>%
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+
+j_meta <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_states.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score),
+         resp = fct_relevel(resp, "Learning Memory", after = Inf))
+j_meta_desc <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_descriptions.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+encoding <- read_csv(here::here("ignore", "data", "task_encoding.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+r_facts <- read_csv(here::here("ignore", "data",  "task_retrieval_facts.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+r_pics <- read_csv(here::here("ignore", "data", "task_retrieval_pics.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+r_source <- read_csv(here::here("ignore", "data", "task_retrieval_source.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+q_demos  <- read_csv(here::here("ignore", "data", "q_trivia_demos.csv")) %>% 
+  left_join(j_exp, by = "subj_num") %>% 
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+q_posttask  <- read_csv(here::here("ignore", "data", "q_posttask.csv"))
+
+retrieval <- r_facts %>%
+  select(subj_num, j_score, group, group_trial_num, retrieval_block, ep_is_same, sem_is_same, retrieval_trial_num, category, acc_recall, rt_start_recall = rt_start, rt_end_recall = rt_end) %>% 
+  left_join(r_pics %>% 
+              select(subj_num, group, group_trial_num, category, resp_pic = resp, rt_pic = rt)) %>% 
+  left_join(r_source %>%
+              select(subj_num, group, group_trial_num, category, resp_source = resp, rt_source = rt)) %>%
+  left_join(encoding %>% 
+              select(subj_num, group, group_trial_num, category, interest = resp, already_knew)) %>% 
+  mutate(retrieval_block_type = case_when(retrieval_block <= 4 ~ "ep_same_sem_same",
+                                          retrieval_block <= 8 ~ "ep_same_sem_diff",
+                                          retrieval_block <= 12 ~ "ep_diff_sem_same",
+                                          retrieval_block <= 16 ~ "ep_diff_sem_diff",
+                                          TRUE ~ NA_character_))
+```
+
+
+class: inverse, middle
+
+# Trivia expertise assessment
+
+---
+
+### Do Ps accurately assess their own trivia skill?
+
+```{r}
+q_demos %>% 
+  ggplot(aes(x = trivia_skill_self, y = j_score)) +
+  geom_abline(slope = .01, intercept = 0, linetype = "dotted") +
+  geom_point(size = 3) +
+  expand_limits(y = 0) +
+  labs(x = "Self-reported trivia expertise (relative to 'average person')",
+       y = "Expertise score on Jeopardy audition test") +
+  theme_bw()
+```
+
+---
+
+### Trivia recall by confidence
+
+```{r}
+j_recall %>% 
+  ggplot(aes(x = resp_conf, y = as.integer(acc_recall), color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+```{r}
+j_recall %>% 
+  ggplot(aes(x = rt_end_recall, y = as.integer(acc_recall), color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Recall submit RT", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+```{r}
+j_recall %>% 
+  ggplot(aes(x = rt_end_recall, y = resp_conf, color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "lm", alpha = 0.05) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Recall submit RT", y = "Recall confidence", color = "Expertise score", fill = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+### Metamemory state counts
+
+```{r}
+j_meta %>%
+  filter(!is.na(resp)) %>% 
+  left_join(j_recall %>% select(subj_num, answer, acc_recall)) %>% 
+  mutate(acc_recall = recode(as.character(acc_recall),
+                             `FALSE` = "incorrect",
+                             `TRUE` = "correct")) %>% 
+  ggplot(aes(x = subj_num, fill = resp)) +
+  geom_bar() +
+  scale_x_discrete(guide = guide_axis(angle = 30)) +
+  facet_grid(~acc_recall) +
+  labs(x = "Participant", y = "# facts labeled with that memory state", fill = "Memory state") +
+  theme_bw()
+```
+
+---
+
+### Metamemory state relative percentages
+
+```{r}
+j_meta %>%
+  left_join(j_recall %>% select(subj_num, answer, acc_recall)) %>% 
+  mutate(acc_recall = recode(as.character(acc_recall),
+                             `FALSE` = "incorrect",
+                             `TRUE` = "correct")) %>% 
+  count(subj_num, acc_recall, resp) %>% 
+  group_by(subj_num, acc_recall) %>% 
+  mutate(prob = n / sum(n)) %>% 
+  ggplot(aes(x = subj_num, y = prob, fill = resp)) +
+  geom_col() +
+  scale_x_discrete(guide = guide_axis(angle = 30)) +
+  facet_grid(~acc_recall) +
+  labs(x = "Participant", y = "Percent facts labeled with that memory state", fill = "Memory state") +
+  theme_bw()
+```
+
+---
+
+### Metamemory descriptions: Guess
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Guess") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+### Metamemory descriptions: Just Know
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Just Know") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+### Metamemory descriptions: Related Memory
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Related Memory") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+### Metamemory descriptions: Learning Memory
+
+```{r, results = "asis"}
+j_meta_desc %>%
+  filter(question == "Learning Memory") %>% 
+  arrange(subj_num) %>% 
+  pull(resp) %>% 
+  paste0(">", .) %>% 
+  cat(sep = "\n\n")
+```
+
+---
+
+class: inverse, middle
+
+# Museum task encoding
+
+---
+
+```{r}
+encoding %>% 
+  ggplot(aes(x = resp, fill = category)) +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  facet_wrap(~subj_num)
+```
+
+---
+
+```{r}
+encoding %>% 
+  ggplot(aes(x = resp, y = rt, color = j_score, fill = j_score)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~subj_num) +
+  scale_colour_viridis_c() +
+  scale_fill_viridis_c()
+```
+
+---
+
+```{r}
+encoding %>% 
+  mutate(already_knew = fct_relevel(already_knew, "Did not know this before", "Knew some of this before")) %>% 
+  ggplot(aes(x = subj_num, fill = already_knew)) +
+  geom_bar() +
+  scale_x_discrete(guide = guide_axis(angle = 30)) +
+  labs(x = "Participant", y = "# facts already knew", fill = "Prior knowledge") +
+  theme_bw()
+```
+
+
+---
+
+class: inverse, middle
+
+# Museum task retrieval
+
+---
+
+### Fact recall by question order/chunk type
+
+```{r}
+r_facts %>% 
+  ggplot(aes(x = retrieval_trial_num, y = acc_recall)) +
+  geom_rect(aes(x = NULL, y = NULL, xmin = xmin, xmax = xmax, fill = interaction(ep_is_same, sem_is_same)),
+            data = r_facts %>%
+              mutate(ep_is_same = recode(ep_is_same,
+                                         `0` = "ep diff",
+                                         `1` = "ep same"),
+                     sem_is_same = recode(sem_is_same,
+                                          `0` = "sem diff",
+                                          `1` = "sem same")) %>% 
+              select(subj_num, retrieval_block, retrieval_trial_num, ep_is_same, sem_is_same) %>%
+              group_by(subj_num, retrieval_block) %>%
+              filter(retrieval_trial_num %in% range(retrieval_trial_num)) %>%
+              mutate(xtype = if_else(retrieval_trial_num == min(retrieval_trial_num), "xmin", "xmax")) %>%
+              ungroup() %>%
+              pivot_wider(names_from = xtype, values_from = retrieval_trial_num) %>% 
+              mutate(xmin = xmin - 0.5,
+                     xmax = xmax + 0.5),
+            ymin = 0, ymax = 1, alpha = 0.5) +
+  geom_line() +
+  geom_point() +
+  scale_colour_viridis_b() +
+  scale_y_continuous(n.breaks = 3) +
+  facet_grid(subj_num ~ .) +
+  labs(x = "Fact recall trial (beginning to end)", y = "Fact recall accuracy", fill = "Chunk type") +
+  theme_bw()
+```
+
+---
+
+### Fact recall by chunk type
+
+```{r}
+r_facts %>% 
+  mutate(ep_is_same = recode(ep_is_same,
+                                         `0` = "ep diff",
+                                         `1` = "ep same"),
+                     sem_is_same = recode(sem_is_same,
+                                          `0` = "sem diff",
+                                          `1` = "sem same")) %>% 
+  group_by(subj_num, j_score, ep_is_same, sem_is_same) %>% 
+  summarize(mean_acc = mean(acc_recall)) %>% 
+  ggplot(aes(x = interaction(ep_is_same, sem_is_same), y = mean_acc,
+             group = subj_num,
+             color = j_score)) +
+  geom_line() +
+  geom_point() +
+  scale_x_discrete(guide = guide_axis(angle = 30)) +
+  scale_color_viridis_c() +
+  labs(x = "Chunk type", y = "Percent facts correctly recalled", color = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+### Photo recognition
+
+Current setup: A-A' 2AFC with similar lure
+
+```{r}
+r_pics %>%
+  ggplot(aes(x = factor(subj_num), y = resp, color = j_score)) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_boxplot() +
+  scale_colour_viridis_c() +
+  guides(color = FALSE) +
+  labs(x = "Participant", y = "Accuracy with confidence (positive = correct)") +
+  theme_bw()
+```
+
+---
+
+### Source memory for which museum
+
+```{r}
+r_source %>%
+  ggplot(aes(x = factor(subj_num), y = resp, color = j_score)) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_boxplot() +
+  scale_colour_viridis_c() +
+  guides(color = FALSE) +
+  labs(x = "Participant", y = "Accuracy with confidence (positive = correct)") +
+  theme_bw()
+```
+
+---
+
+class: inverse, middle
+
+# Retrieval between-task relationships
+
+---
+
+### Does _photo_ retrieval predict _fact_ retrieval?
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = resp_pic, y = acc_recall, color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Photo recognition accuracy", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+---
+
+### Does _source_ retrieval predict _fact_ retrieval?
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = resp_source, y = acc_recall, color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Source recognition accuracy", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+---
+
+### Does _source_ retrieval predict _photo_ retrieval?
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = resp_source, y = resp_pic, color = j_score, fill = j_score)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num) +
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Source recognition accuracy", y = "Photo recognition accuracy") +
+  theme_bw()
+```
+
+---
+
+### Does interest at encoding predict _fact_ retrieval?
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = interest, y = acc_recall, color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Interest in fact at encoding", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+---
+
+### Does interest at encoding predict _photo_ retrieval?
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = interest, y = resp_pic, color = j_score, fill = j_score)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num) +
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Interest in fact at encoding", y = "Photo recognition accuracy") +
+  theme_bw()
+```
+
+---
+
+### Does interest at encoding predict _source_ retrieval?
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = interest, y = resp_source, color = j_score, fill = j_score)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num) +
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Interest in fact at encoding", y = "Source recognition accuracy") +
+  theme_bw()
+```
+
+---
+
+class: inverse, middle
+
+# STOP! Dirty graphs ahead
+
+---
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = log(rt_pic), y = resp_pic)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num, scales = "free_x")
+```
+
+```{r}
+retrieval %>% 
+  ggplot(aes(x = log(rt_source), y = resp_source)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~subj_num, scales = "free_x")
+```
