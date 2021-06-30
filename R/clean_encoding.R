@@ -2,7 +2,7 @@ require(tidyverse)
 require(magrittr)
 source(here::here("R", "utils_read_gorilla.R"))
 
-raw <- list.files(here::here("ignore", "data", "raw"), recursive = T, full.names = T) %>% 
+raw <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T) %>% 
   read_gorilla_data("task-ujps|task-wckg")
 
 pretest <- read_csv(here::here("ignore", "data", "task_pretest.csv")) %>%
@@ -19,7 +19,11 @@ less_raw <- raw %>%
          rt = `Reaction Time`,
          resp = `Response`,
          starts_with("encoding_sentence")) %>% 
-  filter(trial_screen == "fact", zone == "slider") %>%
+  filter((trial_screen == "fact" & zone == "slider") | trial_screen == "already_knew") %>%
+  nest(data = -c(subj_num, group, group_trial_num, trial_screen)) %>%
+  pivot_wider(names_from = trial_screen, values_from = data) %>% 
+  mutate(already_knew = map_chr(already_knew, ~.x$resp)) %>% 
+  unnest(fact) %>% 
   mutate(# Should catch slider trials where the slider was never clicked
          # bc I think timeout will still be true if submitResp was never clicked but the slider was moved
          resp = if_else(zone == "scale" & rt >= 34900, NA_character_, resp),
@@ -29,7 +33,7 @@ less_raw <- raw %>%
   mutate(data = map(data, get_slider_rt)) %>%
   unnest(data) %>% 
   # this SHOULD keep one row per trial and also keep no responses
-  select(-c(trial_screen, zone)) %>% 
+  select(-zone) %>% 
   nest(data = -subj_num) %>% 
   left_join(pretest, by = "subj_num") %>% 
   mutate(data = map2(data, categories,
@@ -37,6 +41,7 @@ less_raw <- raw %>%
                                     group,
                                     resp,
                                     rt,
+                                    already_knew,
                                     encoding_sentence = paste0("encoding_sentence.", .y)))) %>%
   unnest(data) %>% 
   mutate(category = if_else(group == "academic", category1, category2)) %>% 
