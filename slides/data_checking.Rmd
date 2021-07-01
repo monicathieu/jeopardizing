@@ -229,6 +229,22 @@ j_meta_desc %>%
 
 class: inverse, middle
 
+# Self-report measures
+
+---
+
+```{r}
+q_demos %>%
+  select(subj_num, starts_with("trivia"), j_score) %>% 
+  mutate(j_score = j_score * 100) %>% 
+  pivot_longer(cols = -subj_num, names_to = "var", values_to = "value") %>% 
+  ggplot(aes(x = value)) + geom_histogram() + facet_wrap(~ var)
+```
+
+---
+
+class: inverse, middle
+
 # Museum task encoding
 
 ---
@@ -264,7 +280,6 @@ encoding %>%
   theme_bw()
 ```
 
-
 ---
 
 class: inverse, middle
@@ -276,17 +291,11 @@ class: inverse, middle
 ### Fact recall by question order/chunk type
 
 ```{r}
-r_facts %>% 
+retrieval %>% 
   ggplot(aes(x = retrieval_trial_num, y = acc_recall)) +
-  geom_rect(aes(x = NULL, y = NULL, xmin = xmin, xmax = xmax, fill = interaction(ep_is_same, sem_is_same)),
-            data = r_facts %>%
-              mutate(ep_is_same = recode(ep_is_same,
-                                         `0` = "ep diff",
-                                         `1` = "ep same"),
-                     sem_is_same = recode(sem_is_same,
-                                          `0` = "sem diff",
-                                          `1` = "sem same")) %>% 
-              select(subj_num, retrieval_block, retrieval_trial_num, ep_is_same, sem_is_same) %>%
+  geom_rect(aes(x = NULL, y = NULL, xmin = xmin, xmax = xmax, fill = retrieval_block_type),
+            data = retrieval %>%
+              select(subj_num, retrieval_block, retrieval_trial_num, retrieval_block_type) %>%
               group_by(subj_num, retrieval_block) %>%
               filter(retrieval_trial_num %in% range(retrieval_trial_num)) %>%
               mutate(xtype = if_else(retrieval_trial_num == min(retrieval_trial_num), "xmin", "xmax")) %>%
@@ -296,8 +305,8 @@ r_facts %>%
                      xmax = xmax + 0.5),
             ymin = 0, ymax = 1, alpha = 0.5) +
   geom_line() +
-  geom_point() +
-  scale_colour_viridis_b() +
+  geom_point(aes(color = already_knew)) +
+  # scale_colour_viridis_b() +
   scale_y_continuous(n.breaks = 3) +
   facet_grid(subj_num ~ .) +
   labs(x = "Fact recall trial (beginning to end)", y = "Fact recall accuracy", fill = "Chunk type") +
@@ -327,6 +336,33 @@ r_facts %>%
   scale_color_viridis_c() +
   labs(x = "Chunk type", y = "Percent facts correctly recalled", color = "Expertise score") +
   theme_bw()
+```
+
+---
+
+### Fact recall by already knew status
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall > 0, 1, 0)) %>% 
+  filter(!is.na(already_knew)) %>% 
+  ggplot(aes(x = subj_num, fill = factor(acc_recall))) +
+  geom_bar() +
+  facet_grid(~already_knew)
+```
+
+---
+
+```{r}
+retrieval %>% 
+  mutate(acc_recall = if_else(acc_recall > 0, 1, 0)) %>% 
+  filter(!is.na(already_knew)) %>% 
+  count(subj_num, acc_recall, already_knew) %>% 
+  group_by(subj_num, already_knew) %>% 
+  mutate(prob = n / sum(n)) %>% 
+  ggplot(aes(x = subj_num, y = prob, fill = factor(acc_recall))) +
+  geom_col() +
+  facet_grid(~already_knew)
 ```
 
 ---
@@ -373,12 +409,14 @@ class: inverse, middle
 
 ```{r}
 retrieval %>% 
+  filter(!is.na(already_knew)) %>% 
   mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
   ggplot(aes(x = resp_pic, y = acc_recall, color = j_score, fill = j_score)) + 
   geom_jitter(alpha = 0.3, height = 0.05) + 
   geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
+  facet_grid(~already_knew) +
   labs(x = "Photo recognition accuracy", y = "Fact recall accuracy (generous)") +
   theme_bw()
 ```
@@ -406,9 +444,8 @@ retrieval %>%
 ```{r}
 retrieval %>% 
   ggplot(aes(x = resp_source, y = resp_pic, color = j_score, fill = j_score)) + 
-  geom_point() + 
-  geom_smooth(method = "lm") + 
-  facet_wrap(~subj_num) +
+  geom_point(alpha = 0.3) + 
+  geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
   labs(x = "Source recognition accuracy", y = "Photo recognition accuracy") +
@@ -438,9 +475,8 @@ retrieval %>%
 ```{r}
 retrieval %>% 
   ggplot(aes(x = interest, y = resp_pic, color = j_score, fill = j_score)) + 
-  geom_point() + 
-  geom_smooth(method = "lm") + 
-  facet_wrap(~subj_num) +
+  geom_point(alpha = 0.3) + 
+  geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
   labs(x = "Interest in fact at encoding", y = "Photo recognition accuracy") +
@@ -454,9 +490,8 @@ retrieval %>%
 ```{r}
 retrieval %>% 
   ggplot(aes(x = interest, y = resp_source, color = j_score, fill = j_score)) + 
-  geom_point() + 
-  geom_smooth(method = "lm") + 
-  facet_wrap(~subj_num) +
+  geom_point(alpha = 0.3) + 
+  geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
   labs(x = "Interest in fact at encoding", y = "Source recognition accuracy") +
