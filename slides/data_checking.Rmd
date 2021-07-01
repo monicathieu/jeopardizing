@@ -69,7 +69,10 @@ retrieval <- r_facts %>%
                                           retrieval_block <= 8 ~ "ep_same_sem_diff",
                                           retrieval_block <= 12 ~ "ep_diff_sem_same",
                                           retrieval_block <= 16 ~ "ep_diff_sem_diff",
-                                          TRUE ~ NA_character_))
+                                          TRUE ~ NA_character_),
+         encoding_trial_num = if_else(group == "academic",
+                                      group_trial_num * 2 - 1,
+                                      group_trial_num * 2))
 ```
 
 
@@ -367,6 +370,26 @@ retrieval %>%
 
 ---
 
+### Fact recall by ENCODING question order
+
+```{r}
+retrieval %>% 
+  nest(data = -subj_num) %>% 
+  sample_n(10) %>% 
+  unnest(data) %>% 
+  mutate(encoding_trial_num = if_else(group == "academic", group_trial_num * 2 - 1, group_trial_num * 2)) %>% 
+  ggplot(aes(x = retrieval_trial_num, y = acc_recall)) +
+  geom_line() +
+  geom_point(aes(color = already_knew)) +
+  # scale_colour_viridis_b() +
+  scale_y_continuous(n.breaks = 3) +
+  facet_grid(subj_num ~ .) +
+  labs(x = "Encoding trial (beginning to end)", y = "Subsequent fact recall accuracy") +
+  theme_bw()
+```
+
+---
+
 ### Photo recognition
 
 Current setup: A-A' 2AFC with similar lure
@@ -409,14 +432,14 @@ class: inverse, middle
 
 ```{r}
 retrieval %>% 
-  filter(!is.na(already_knew)) %>% 
+  # filter(!is.na(already_knew)) %>% 
   mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
   ggplot(aes(x = resp_pic, y = acc_recall, color = j_score, fill = j_score)) + 
   geom_jitter(alpha = 0.3, height = 0.05) + 
   geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
-  facet_grid(~already_knew) +
+  # facet_grid(~already_knew) +
   labs(x = "Photo recognition accuracy", y = "Fact recall accuracy (generous)") +
   theme_bw()
 ```
