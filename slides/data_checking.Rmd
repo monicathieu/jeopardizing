@@ -38,7 +38,11 @@ j_meta_desc <- read_csv(here::here("ignore", "data", "task_jeopardy_meta_descrip
   mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
 encoding <- read_csv(here::here("ignore", "data", "task_encoding.csv")) %>% 
   left_join(j_exp, by = "subj_num") %>% 
-  mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+  mutate(subj_num = fct_reorder(as.character(subj_num), j_score),
+         already_knew = fct_recode(already_knew,
+                               none = "Did not know this before",
+                               some = "Knew some of this before",
+                               all = "Knew all of this before"))
 r_facts <- read_csv(here::here("ignore", "data",  "task_retrieval_facts.csv")) %>% 
   left_join(j_exp, by = "subj_num") %>% 
   mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
