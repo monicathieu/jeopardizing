@@ -51,7 +51,7 @@ scored <- unscored %>%
          acc_recall_grepl_lastname = case_when(answer == "uranium" & grepl("plutonium", resp_recall, ignore.case = T) ~ FALSE,
                                             TRUE ~ acc_recall_grepl_lastname))
 
-stopifnot(scored %>% filter(!acc_recall_grepl_strict, acc_recall_grepl_fuzzy, !acc_recall_grepl_lastname) %>% nrow() == 0)
+# stopifnot(scored %>% filter(!acc_recall_grepl_strict, acc_recall_grepl_fuzzy, !acc_recall_grepl_lastname) %>% nrow() == 0)
 
 ## hand scoring interactively ----
 
@@ -98,6 +98,8 @@ scored %<>%
     !is.na(acc_recall_byhand) ~ acc_recall_byhand,
     # !strict, !fuzzy, !lastname: all wrong, totally wrong
     !acc_recall_grepl_strict & !acc_recall_grepl_fuzzy & !acc_recall_grepl_lastname ~ FALSE,
+    # !strict, fuzzy, !lastname: matches part of the answer but not the key part (e.g. "rebellion" but not "boxer")
+    !acc_recall_grepl_strict & acc_recall_grepl_fuzzy & !acc_recall_grepl_lastname ~ FALSE,
     # strict, !fuzzy, !lastname: all wrong, too short
     acc_recall_grepl_strict & !acc_recall_grepl_fuzzy & !acc_recall_grepl_lastname ~ FALSE,
     # strict, !fuzzy, lastname: all right, last name only spelled correctly
