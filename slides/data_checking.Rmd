@@ -18,6 +18,11 @@ output:
 knitr::opts_chunk$set(echo = FALSE, dev = "svglite", message = FALSE, warning = FALSE, fig.asp = 3/4)
 require(tidyverse)
 require(magrittr)
+
+demos_ids <- read_csv(here::here("ignore", "data", "demos_ids.csv"))
+q_google_demos <- read_csv(here::here("ignore", "data", "q_google_demos.csv")) %>% 
+  right_join(demos_ids, by = "demographics_id")
+
 j_recall <- read_csv(here::here("ignore", "data", "task_jeopardy_recall.csv")) %>% 
   mutate(resp_conf = if_else(is.na(resp_recall), NA_real_, resp_conf))
 
@@ -48,9 +53,10 @@ r_pics <- read_csv(here::here("ignore", "data", "task_retrieval_pics.csv")) %>%
 r_source <- read_csv(here::here("ignore", "data", "task_retrieval_source.csv")) %>% 
   left_join(j_exp, by = "subj_num") %>% 
   mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
-q_demos  <- read_csv(here::here("ignore", "data", "q_trivia_demos.csv")) %>% 
+q_trivia_demos  <- read_csv(here::here("ignore", "data", "q_trivia_demos.csv")) %>% 
   left_join(j_exp, by = "subj_num") %>% 
   mutate(subj_num = fct_reorder(as.character(subj_num), j_score))
+
 q_posttask  <- read_csv(here::here("ignore", "data", "q_posttask.csv"))
 
 retrieval <- r_facts %>%
@@ -99,6 +105,18 @@ j_recall %>%
   geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
+  labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+```{r}
+j_recall %>% 
+  left_join(q_google_demos %>% mutate(subj_num = factor(subj_num)), by = "subj_num") %>% 
+  ggplot(aes(x = resp_conf, y = as.integer(acc_recall), color = gender, fill = gender)) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) +
   labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
   theme_bw()
 ```
@@ -258,8 +276,7 @@ encoding %>%
 encoding %>% 
   ggplot(aes(x = resp, y = rt, color = j_score, fill = j_score)) +
   geom_point() +
-  geom_smooth(method = "lm") +
-  facet_wrap(~subj_num) +
+  geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) +
   scale_colour_viridis_c() +
   scale_fill_viridis_c()
 ```
@@ -412,7 +429,7 @@ retrieval %>%
   geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
-  facet_grid(~already_knew) +
+  # facet_grid(~already_knew) +
   labs(x = "Photo recognition accuracy", y = "Fact recall accuracy (generous)") +
   theme_bw()
 ```
