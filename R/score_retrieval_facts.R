@@ -42,6 +42,7 @@ scored <- unscored %>%
          acc_recall_grepl_fuzzy = case_when(
            group_trial_num == 1 & category == "gems" & tolower(resp)  %in% c("cleave", "cleavage") ~ TRUE,
            group_trial_num == 10 & category == "gems" & tolower(resp)  == "knoop" ~ TRUE,
+           group_trial_num == 27 & category == "gems" & tolower(resp) == "pavillion" ~ TRUE,
            group_trial_num == 28 & category == "gems" & tolower(resp) == "step" ~ TRUE,
            group_trial_num == 12 & category == "musi" & grepl("viol", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 14 & category == "musi" & grepl("viol", resp, ignore.case = T) ~ TRUE,
@@ -49,6 +50,7 @@ scored <- unscored %>%
            group_trial_num == 19 & category == "musi" & grepl("claw", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 4 & category == "cars" & grepl("bug|vw", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 5 & category == "cars" & tolower(resp)  == "watt" ~ TRUE,
+           group_trial_num == 7 & category == "cars" & tolower(resp)  == "sleeve" ~ TRUE,
            group_trial_num == 11 & category == "cars" & tolower(resp)  == "planetary" ~ TRUE,
            group_trial_num == 19 & category == "cars" & tolower(resp)  %in% c("turn signal", "blinkers", "flashers") ~ TRUE,
            group_trial_num == 21 & category == "cars" & tolower(resp)  == "talcum" ~ TRUE,
