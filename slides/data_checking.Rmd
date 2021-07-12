@@ -133,6 +133,18 @@ j_recall %>%
 
 ```{r}
 j_recall %>% 
+  mutate(acc_recall = as.integer(acc_recall),
+         # so 0.5 is centered
+         j_score = j_score - 0.5) %>% 
+  lme4::lmer(resp_conf ~ acc_recall * j_score + (1 + acc_recall | subj_num), data = .) %>% 
+  summary()
+```
+
+
+---
+
+```{r}
+j_recall %>% 
   left_join(q_google_demos %>% mutate(subj_num = factor(subj_num)), by = "subj_num") %>% 
   ggplot(aes(x = resp_conf, y = as.integer(acc_recall), color = gender, fill = gender)) + 
   geom_jitter(alpha = 0.3, height = 0.05) + 
