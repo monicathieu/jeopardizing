@@ -91,7 +91,7 @@ class: inverse, middle
 ### Do Ps accurately assess their own trivia skill?
 
 ```{r}
-q_demos %>% 
+q_trivia_demos %>% 
   ggplot(aes(x = trivia_skill_self, y = j_score)) +
   geom_abline(slope = .01, intercept = 0, linetype = "dotted") +
   geom_point(size = 3) +
@@ -113,6 +113,19 @@ j_recall %>%
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
   labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+```{r}
+j_recall %>% 
+  ggplot(aes(x = acc_recall, y = resp_conf, color = j_score, fill = j_score)) + 
+  geom_jitter(alpha = 0.3, width = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "lm", formula = y ~ x, se = FALSE) + 
+  scale_color_viridis_c() +
+  scale_fill_viridis_c() +
+  labs(x = "Recall accuracy (strict)", y = "Recall confidence", color = "Expertise score", fill = "Expertise score") +
   theme_bw()
 ```
 
@@ -255,7 +268,7 @@ class: inverse, middle
 ---
 
 ```{r}
-q_demos %>%
+q_trivia_demos %>%
   select(subj_num, starts_with("trivia"), j_score) %>% 
   mutate(j_score = j_score * 100) %>% 
   pivot_longer(cols = -subj_num, names_to = "var", values_to = "value") %>% 
