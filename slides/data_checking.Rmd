@@ -157,6 +157,7 @@ j_recall %>%
 ```{r}
 j_recall %>% 
   mutate(acc_recall = as.integer(acc_recall),
+         # so 0.5 is centered
          j_score = j_score - 0.5) %>% 
   lme4::lmer(resp_conf ~ acc_recall * j_score + (1 + acc_recall | subj_num), data = .) %>% 
   summary()
