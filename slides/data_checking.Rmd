@@ -21,7 +21,8 @@ require(magrittr)
 
 demos_ids <- read_csv(here::here("ignore", "data", "demos_ids.csv"))
 q_google_demos <- read_csv(here::here("ignore", "data", "q_google_demos.csv")) %>% 
-  right_join(demos_ids, by = "demographics_id")
+  right_join(demos_ids, by = "demographics_id") %>% 
+  mutate(subj_num = factor(subj_num))
 
 j_recall <- read_csv(here::here("ignore", "data", "task_jeopardy_recall.csv")) %>% 
   mutate(resp_conf = if_else(is.na(resp_recall), NA_real_, resp_conf))
@@ -84,6 +85,23 @@ retrieval <- r_facts %>%
 
 class: inverse, middle
 
+# Demographics
+
+---
+
+### What is the age and gender breakdown?
+
+```{r}
+q_google_demos %>% 
+  ggplot(aes(x = age, fill = gender)) +
+  geom_histogram(position = "identity", alpha = 0.5)
+```
+
+
+---
+
+class: inverse, middle
+
 # Trivia expertise assessment
 
 ---
@@ -92,9 +110,13 @@ class: inverse, middle
 
 ```{r}
 q_trivia_demos %>% 
+  left_join(q_google_demos, by = "subj_num") %>% 
   ggplot(aes(x = trivia_skill_self, y = j_score)) +
-  geom_abline(slope = .01, intercept = 0, linetype = "dotted") +
-  geom_point(size = 3) +
+  # geom_abline(slope = .01, intercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = 75, linetype = "dotted") +
+  geom_hline(yintercept = 0.7, linetype = "dotted") +
+  geom_point(aes(color = gender), size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", formula = y ~ x) +
   expand_limits(y = 0) +
   labs(x = "Self-reported trivia expertise (relative to 'average person')",
        y = "Expertise score on Jeopardy audition test") +
@@ -129,15 +151,39 @@ j_recall %>%
   theme_bw()
 ```
 
+
 ---
 
 ```{r}
 j_recall %>% 
-  left_join(q_google_demos %>% mutate(subj_num = factor(subj_num)), by = "subj_num") %>% 
+  mutate(acc_recall = as.integer(acc_recall),
+         j_score = j_score - 0.5) %>% 
+  lme4::lmer(resp_conf ~ acc_recall * j_score + (1 + acc_recall | subj_num), data = .) %>% 
+  summary()
+```
+
+
+---
+
+```{r}
+j_recall %>% 
+  left_join(q_google_demos, by = "subj_num") %>% 
   ggplot(aes(x = resp_conf, y = as.integer(acc_recall), color = gender, fill = gender)) + 
   geom_jitter(alpha = 0.3, height = 0.05) + 
   geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) +
   labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
+  theme_bw()
+```
+
+---
+
+```{r}
+j_recall %>% 
+  left_join(q_google_demos, by = "subj_num") %>% 
+  ggplot(aes(x = acc_recall, y = resp_conf, color = gender)) + 
+  geom_jitter(alpha = 0.3, width = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "lm", formula = y ~ x, se = FALSE, size = 0.5) + 
+  labs(x = "Recall accuracy (strict)", y = "Recall confidence", color = "Expertise score", fill = "Expertise score") +
   theme_bw()
 ```
 
