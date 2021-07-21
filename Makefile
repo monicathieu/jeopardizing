@@ -1,4 +1,5 @@
-ignore/data/all: ignore/data/q_posttask.csv \
+ignore/data/all: ignore/data/q_google_demos.csv \
+								 ignore/data/q_posttask.csv \
 								 ignore/data/task_retrieval_source.csv \
 								 ignore/data/task_retrieval_pics.csv \
 								 ignore/data/task_retrieval_facts.csv \
@@ -9,6 +10,14 @@ ignore/data/all: ignore/data/q_posttask.csv \
 								 ignore/data/task_jeopardy_meta_descriptions.csv \
 								 ignore/data/task_jeopardy_recall.csv
 	touch ignore/data/all
+
+# while google spreadsheet aly lab demos do not ACTUALLY depend on gorilla data,
+# setting this dependency should trigger the timestamp condition necessary
+# for the output demos CSV to appear "out of date"
+# bc there is no way for make to know when the upstream google sheet is updated
+ignore/data/q_google_demos.csv: R/clean_q_google_demos.R \
+																ignore/data/raw/real/*
+	Rscript -e 'source("$<")'
 
 ignore/data/q_posttask.csv: R/clean_q_posttask.R \
 														ignore/data/raw/real/* \
