@@ -6,7 +6,7 @@ require(magrittr)
 unscored <- read_csv(here::here("ignore", "data", "task_jeopardy_recall_unscored.csv"))
 
 if (FALSE) {
-  googledrive::drive_download(file = as_id("1e7R4CSDjSA5trC820aiwUbe7szjn7DTfMiZPI4my8Rk"),
+  googledrive::drive_download(file = googledrive::as_id("1e7R4CSDjSA5trC820aiwUbe7szjn7DTfMiZPI4my8Rk"),
                               path = here::here("stim_stuff", "jeopardy_spreadsheet.csv"),
                               type = "csv",
                               overwrite = TRUE)
@@ -34,7 +34,7 @@ scored <- unscored %>%
          # Particular very common misspellings that get special treatment
          acc_recall_grepl_strict = case_when(answer == "Spanish-American War" & grepl("spanish american", resp_recall, ignore.case = T) ~ TRUE,
                                              answer == "Andrea Bocelli" & grepl("andrea boccelli", resp_recall, ignore.case = T) ~ TRUE,
-                                             answer == "distillation" & startsWith(tolower(resp_recall), "distill") ~ TRUE,
+                                             answer == "distillation" & grepl("^distill|^destill", resp_recall, ignore.case = T) ~ TRUE,
                                              answer == "uranium" & grepl("plutonium", resp_recall, ignore.case = T) ~ FALSE,
                                              TRUE ~ acc_recall_grepl_strict),
          acc_recall_grepl_fuzzy = map2_lgl(resp_recall, answer,
@@ -45,6 +45,7 @@ scored <- unscored %>%
                                              agrepl(b, a, max.distance = 0.25, ignore.case = T)
                                            }),
          acc_recall_grepl_fuzzy = case_when(answer == "uranium" & grepl("plutonium", resp_recall, ignore.case = T) ~ FALSE,
+                                            answer == "Speaker of the House" & tolower(resp_recall) == "house speaker" ~ TRUE,
                                             TRUE ~ acc_recall_grepl_fuzzy),
          acc_recall_grepl_lastname = map2_lgl(resp_recall, answer_short,
                                               ~agrepl(.y, .x, max.distance = 0.25, ignore.case = T)),
