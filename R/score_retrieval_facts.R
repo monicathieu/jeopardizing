@@ -3,6 +3,10 @@
 require(tidyverse)
 require(magrittr)
 
+my_agrepl <- function (pattern, x, max.distance = 0.24, ignore.case = T) {
+  return (coalesce(c(adist(pattern, x, ignore.case = ignore.case)) / nchar(pattern) <= max.distance, FALSE))
+}
+
 unscored <- read_csv(here::here("ignore", "data", "task_retrieval_facts_unscored.csv"))
 
 ## grepl scoring first pass----
@@ -24,6 +28,7 @@ scored <- unscored %>%
            group_trial_num == 13 & category == "musi" & tolower(resp) == "hurdy gurdy" ~ TRUE,
            group_trial_num == 37 & category == "cook" & grepl("orchid", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 38 & category == "cook" & grepl("hen-of-the-woods", resp, ignore.case = T) ~ TRUE,
+           group_trial_num == 16 & category == "dino" & tolower(resp) == "nose" ~ TRUE,
            group_trial_num == 21 & category == "dino" & grepl("medullary", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 36 & category == "dino" & grepl("saw fish", resp, ignore.case = T) ~ TRUE,
            TRUE ~ acc_recall_grepl_strict
@@ -33,39 +38,51 @@ scored <- unscored %>%
                                              # trim non alpha nums so they don't artificially pad the resp length
                                              a <- str_remove_all(a, "[^a-zA-Z\\d\\s-]")
                                              if (b == "medullary bone") b <- "medullary"
-                                             out <- agrepl(b, a, max.distance = 0.3, ignore.case = T)
+                                             out <- my_agrepl(b, a)
                                              return (out)
                                            }
          ),
          # exact spellings of short versions that should get fuzzy credit as well
          # or certain phrases to flag for visual inspection for partial credit
          acc_recall_grepl_fuzzy = case_when(
-           group_trial_num == 1 & category == "gems" & tolower(resp)  %in% c("cleave", "cleavage") ~ TRUE,
-           group_trial_num == 10 & category == "gems" & tolower(resp)  == "knoop" ~ TRUE,
+           group_trial_num == 5 & category == "arms" & !startsWith(tolower(resp), "a") ~ FALSE,
+           group_trial_num == 39 & category == "arms" & grepl("head", resp, ignore.case = T) ~ TRUE,
+           group_trial_num == 1 & category == "gems" & tolower(resp)  %in% c("cleave", "cleavage", "clev") ~ TRUE,
+           group_trial_num == 7 & category == "gems" & grepl("zirconi", resp, ignore.case = T) ~ FALSE,
+           group_trial_num == 10 & category == "gems" & grepl("knoop", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 27 & category == "gems" & tolower(resp) == "pavillion" ~ TRUE,
            group_trial_num == 28 & category == "gems" & tolower(resp) == "step" ~ TRUE,
-           group_trial_num == 12 & category == "musi" & grepl("viol", resp, ignore.case = T) ~ TRUE,
-           group_trial_num == 14 & category == "musi" & grepl("viol", resp, ignore.case = T) ~ TRUE,
-           group_trial_num == 17 & category == "musi" & tolower(resp)  == "troll" ~ TRUE,
+           group_trial_num == 30 & category == "gems" & tolower(resp) == "10x" ~ TRUE,
+           group_trial_num %in% c(12, 14) & category == "musi" & grepl("viol", resp, ignore.case = T) ~ TRUE,
+           group_trial_num %in% c(12, 14) & category == "musi" & tolower(resp) %in% c("viol", "viola") ~ TRUE,
+           group_trial_num == 17 & category == "musi" & tolower(resp)  == "troll" | grepl("aeac#", str_remove_all(resp, "-\ "), ignore.case = T) ~ TRUE,
+           group_trial_num == 19 & category == "musi" & acc_recall_grepl_strict & grepl("hand", resp, ignore.case = T) ~ FALSE,
+           group_trial_num == 19 & category == "musi" & tolower(resp) == "claw" ~ FALSE,
            group_trial_num == 19 & category == "musi" & grepl("claw", resp, ignore.case = T) ~ TRUE,
-           group_trial_num == 4 & category == "cars" & grepl("bug|vw", resp, ignore.case = T) ~ TRUE,
+           group_trial_num == 2 & category == "cars" & grepl("exhaustion", resp, ignore.case = T) ~ FALSE,
+           group_trial_num == 4 & category == "cars" & grepl("bug|beetle|vw|volkswag", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 5 & category == "cars" & tolower(resp)  == "watt" ~ TRUE,
            group_trial_num == 7 & category == "cars" & tolower(resp)  == "sleeve" ~ TRUE,
            group_trial_num == 11 & category == "cars" & tolower(resp)  == "planetary" ~ TRUE,
-           group_trial_num == 19 & category == "cars" & tolower(resp)  %in% c("turn signal", "blinkers", "flashers") ~ TRUE,
+           group_trial_num == 19 & category == "cars" & grepl("turn|blinker|flasher", resp, ignore.case = T) ~ TRUE,
+           group_trial_num == 20 & category == "cars" & grepl(" ", resp, ignore.case = T) ~ FALSE,
            group_trial_num == 21 & category == "cars" & tolower(resp)  == "talcum" ~ TRUE,
            group_trial_num == 24 & category == "cars" & tolower(resp)  == "leaf" ~ TRUE,
            group_trial_num == 30 & category == "cars" & grepl("4-wheel|4 wheel|four wheel|four-wheel", resp, ignore.case = T) & grepl("brak", resp, ignore.case = T) ~ TRUE,
-           group_trial_num == 31 & category == "cars" & tolower(resp)  == "disc" ~ TRUE,
+           group_trial_num == 31 & category == "cars" & tolower(resp)  %in% c("disc", "disk") ~ TRUE,
            group_trial_num == 33 & category == "cars" & tolower(resp)  == "drum" ~ TRUE,
            group_trial_num == 36 & category == "cars" & tolower(resp)  %in% c("ply", "plie", "plies") ~ TRUE,
            group_trial_num == 37 & category == "cars" & tolower(resp)  == "radial" ~ TRUE,
            group_trial_num == 24 & category == "cook" & tolower(resp)  == "careme" ~ TRUE,
-           group_trial_num == 33 & category == "cook" & tolower(resp) == "muskmelon" ~ TRUE,
-           group_trial_num == 35 & category == "cook" & tolower(resp) == "maillard" ~ TRUE,
+           group_trial_num == 33 & category == "cook" & grepl("muskmelon", str_remove_all(resp, " "), ignore.case = T) ~ TRUE,
+           group_trial_num == 35 & category == "cook" & my_agrepl("maillard", resp) ~ TRUE,
            group_trial_num == 37 & category == "cook" & grepl("orchid", resp, ignore.case = T) ~ TRUE,
-           group_trial_num == 34 & category == "dino" & tolower(resp)  == "anning" ~ TRUE,
+           group_trial_num == 13 & category == "dino" & grepl("bone", resp, ignore.case = T) & grepl("war", resp, ignore.case = T) ~ TRUE,
+           group_trial_num == 16 & category == "dino" & grepl("nose", resp, ignore.case = T) ~ TRUE,
            group_trial_num == 21 & category == "dino" &  tolower(resp) == "medullary" ~ TRUE,
+           group_trial_num == 21 & category == "dino" &  !startsWith(tolower(resp), "m") ~ FALSE,
+           group_trial_num == 34 & category == "dino" & tolower(resp)  == "anning" ~ TRUE,
+           !grepl(" ", test_answer) & nchar(resp) / nchar(test_answer) <= 0.81 ~ FALSE,
            TRUE ~ acc_recall_grepl_fuzzy
          ))
 

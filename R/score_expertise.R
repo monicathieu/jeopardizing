@@ -42,13 +42,13 @@ scored <- unscored %>%
                                              # so titles starting with The don't get disadvantaged
                                              # by the cost dividing by whole string length
                                              b <- str_remove(b, "^The ")
-                                             agrepl(b, a, max.distance = 0.25, ignore.case = T)
+                                             agrepl(b, a, max.distance = 0.18, ignore.case = T)
                                            }),
          acc_recall_grepl_fuzzy = case_when(answer == "uranium" & grepl("plutonium", resp_recall, ignore.case = T) ~ FALSE,
                                             answer == "Speaker of the House" & tolower(resp_recall) == "house speaker" ~ TRUE,
                                             TRUE ~ acc_recall_grepl_fuzzy),
          acc_recall_grepl_lastname = map2_lgl(resp_recall, answer_short,
-                                              ~agrepl(.y, .x, max.distance = 0.25, ignore.case = T)),
+                                              ~agrepl(.y, .x, max.distance = 0.18, ignore.case = T)),
          acc_recall_grepl_lastname = case_when(answer == "uranium" & grepl("plutonium", resp_recall, ignore.case = T) ~ FALSE,
                                             TRUE ~ acc_recall_grepl_lastname))
 
@@ -65,7 +65,7 @@ scored %<>% left_join(byhand)
 #scored$acc_recall_byhand <- NA
 for (i in 1:nrow(scored)) {
   # if strict is false, and at least one of fuzzy or lastname is true
-  if (is.na(scored$acc_recall_byhand[i]) & !scored$acc_recall_grepl_strict[i] & (scored$acc_recall_grepl_fuzzy[i] | scored$acc_recall_grepl_lastname[i])) {
+  if (is.na(scored$acc_recall_byhand[i]) & nchar(scored$resp_recall[i]) > 2 & scored$acc_recall_grepl_strict[i] != (scored$acc_recall_grepl_fuzzy[i] | scored$acc_recall_grepl_lastname[i])) {
     
     cat("\nCorrect answer:", crayon::green(scored$answer[i]),
         " Response:", crayon::yellow(scored$resp_recall[i]))
@@ -105,6 +105,8 @@ scored %<>%
     acc_recall_grepl_strict & !acc_recall_grepl_fuzzy & !acc_recall_grepl_lastname ~ FALSE,
     # strict, !fuzzy, lastname: all right, last name only spelled correctly
     acc_recall_grepl_strict & !acc_recall_grepl_fuzzy & acc_recall_grepl_lastname ~ TRUE,
+    # strict, fuzzy, !lastname: just distillation/distilling?
+    acc_recall_grepl_strict & acc_recall_grepl_fuzzy & !acc_recall_grepl_lastname ~ TRUE,
     # strict, fuzzy, lastname: all right, totally spelled correctly
     acc_recall_grepl_strict & acc_recall_grepl_fuzzy & acc_recall_grepl_lastname ~ TRUE,
     # These two below should never trigger because these are the conditions that trigger hand scoring above
