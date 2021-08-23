@@ -8,6 +8,8 @@ raw <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, fu
   read_gorilla_data("task-v9u2")
 
 less_raw <- raw %>% 
+  # Just this one P had a weird task lapse where 2.5 trials repeated
+  filter(!(`Participant Private ID` == 4488331 & `Event Index` %in% 74:86)) %>% 
   select(subj_num = `Participant Private ID`,
          trial_num = `Trial Number`,
          trial_screen = `Screen Name`,
