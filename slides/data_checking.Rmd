@@ -94,7 +94,7 @@ class: inverse, middle
 ```{r}
 q_google_demos %>% 
   ggplot(aes(x = age, fill = gender)) +
-  geom_histogram(position = "identity", alpha = 0.5)
+  geom_histogram(position = "identity", alpha = 0.5, binwidth = 2)
 ```
 
 
@@ -103,6 +103,17 @@ q_google_demos %>%
 class: inverse, middle
 
 # Trivia expertise assessment
+
+---
+
+### What is our sample spread of trivia expertise?
+
+```{r}
+j_exp %>% 
+  ggplot(aes(x = j_score)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0.7, linetype = "dotted")
+```
 
 ---
 
@@ -134,61 +145,40 @@ j_recall %>%
   geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
-  labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
+  labs(x = "Recall confidence",
+       y = "Recall accuracy (strict)",
+       color = "Expertise score",
+       fill = "Expertise score") +
   theme_bw()
 ```
 
 ---
 
+### Better experts tend to be more confident
+
+This effect does not necessarily imply that better experts are _overconfident._ Rather, it is consistent with better experts tending to have higher latent knowledge for each question, and thus being likely to be more confident overall, even when the answer turns out to be wrong.
+
 ```{r}
 j_recall %>% 
-  ggplot(aes(x = acc_recall, y = resp_conf, color = j_score, fill = j_score)) + 
-  geom_jitter(alpha = 0.3, width = 0.05) + 
-  geom_smooth(aes(group = subj_num), method = "lm", formula = y ~ x, se = FALSE) + 
+  group_by(subj_num, j_score) %>% 
+  summarize(conf_q500 = median(resp_conf, na.rm = TRUE),
+            conf_q250 = quantile(resp_conf, .25, na.rm = TRUE),
+            conf_q750 = quantile(resp_conf, .75, na.rm = TRUE),
+            conf_q025 = quantile(resp_conf, .025, na.rm = TRUE),
+            conf_q975 = quantile(resp_conf, .975, na.rm = TRUE)) %>% 
+  ggplot(aes(x = subj_num, y = conf_q500, color = j_score)) +
+  # geom_errorbar(aes(ymin = conf_q025, ymax = conf_q975), width = 0, size = 0.5) +
+  geom_errorbar(aes(ymin = conf_q250, ymax = conf_q750), width = 0, size = 1) +
+  geom_point(size = 3) +
+  coord_flip() +
   scale_color_viridis_c() +
-  scale_fill_viridis_c() +
-  labs(x = "Recall accuracy (strict)", y = "Recall confidence", color = "Expertise score", fill = "Expertise score") +
-  theme_bw()
-```
-
-
----
-
-```{r}
-j_recall %>% 
-  left_join(q_google_demos, by = "subj_num") %>% 
-  mutate(acc_recall = as.integer(acc_recall),
-         # so 0.5 is centered
-         j_score = j_score - 0.5,
-         is_male = gender == "male") %>% 
-  lme4::lmer(resp_conf ~ acc_recall * j_score + is_male + (1 + acc_recall | subj_num), data = .) %>% 
-  summary()
-```
-
-
----
-
-```{r}
-j_recall %>% 
-  left_join(q_google_demos, by = "subj_num") %>% 
-  ggplot(aes(x = resp_conf, y = as.integer(acc_recall), color = gender, fill = gender)) + 
-  geom_jitter(alpha = 0.3, height = 0.05) + 
-  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) +
-  labs(x = "Recall confidence", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.y = element_blank())
 ```
 
 ---
 
-```{r}
-j_recall %>% 
-  left_join(q_google_demos, by = "subj_num") %>% 
-  ggplot(aes(x = acc_recall, y = resp_conf, color = gender)) + 
-  geom_jitter(alpha = 0.3, width = 0.05) + 
-  geom_smooth(aes(group = subj_num), method = "lm", formula = y ~ x, se = FALSE, size = 0.5) + 
-  labs(x = "Recall accuracy (strict)", y = "Recall confidence", color = "Expertise score", fill = "Expertise score") +
-  theme_bw()
-```
+
 
 ---
 
@@ -196,11 +186,36 @@ j_recall %>%
 j_recall %>% 
   ggplot(aes(x = rt_end_recall, y = as.integer(acc_recall), color = j_score, fill = j_score)) + 
   geom_jitter(alpha = 0.3, height = 0.05) + 
-  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
   labs(x = "Recall submit RT", y = "Recall accuracy (strict)", color = "Expertise score", fill = "Expertise score") +
   theme_bw()
+```
+
+---
+
+### Better experts tend to respond faster
+
+Again, this is consistent with an across-participants tendency to respond faster for subsequently correct answers. Better experts who are giving more correct answers are thus more likely to have shorter RTs.
+
+```{r}
+j_recall %>% 
+  group_by(subj_num, j_score) %>% 
+  summarize(rt_q500 = median(rt_end_recall, na.rm = TRUE),
+            rt_q250 = quantile(rt_end_recall, .25, na.rm = TRUE),
+            rt_q750 = quantile(rt_end_recall, .75, na.rm = TRUE),
+            rt_q025 = quantile(rt_end_recall, .025, na.rm = TRUE),
+            rt_q975 = quantile(rt_end_recall, .975, na.rm = TRUE),
+            rt_mean = mean(rt_end_recall, na.rm = TRUE),
+            rt_sd = sd(rt_end_recall, na.rm = TRUE)) %>% 
+  ggplot(aes(x = subj_num, y = rt_mean, color = j_score)) +
+  geom_errorbar(aes(ymin = rt_mean - rt_sd/2, ymax = rt_mean + rt_sd/2), width = 0, size = 1) +
+  geom_point(size = 3) +
+  coord_flip() +
+  scale_color_viridis_c() +
+  theme_bw() +
+  theme(axis.text.y = element_blank())
 ```
 
 ---
@@ -520,11 +535,11 @@ class: inverse, middle
 
 ```{r}
 retrieval %>% 
-  # filter(!is.na(already_knew)) %>% 
+  filter(already_knew == "none") %>% 
   mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
   ggplot(aes(x = resp_pic, y = acc_recall, color = j_score, fill = j_score)) + 
   geom_jitter(alpha = 0.3, height = 0.05) + 
-  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.05) + 
+  geom_smooth(aes(group = subj_num), method = "glm", method.args = list(family = "binomial"), alpha = 0.02) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
   # facet_grid(~already_knew) +
@@ -537,10 +552,23 @@ retrieval %>%
 ```{r}
 retrieval %>% 
   filter(already_knew == "none") %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = resp_pic, y = acc_recall, color = cut_number(j_score, 3), fill = cut_number(j_score, 3))) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth( method = "glm", method.args = list(family = "binomial"), alpha = 0.2) + 
+  labs(x = "Photo recognition accuracy", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+---
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
   mutate(acc_recall = as.numeric(acc_recall > 0),
-         interest = (interest / 100) - 0.5,
+         resp_pic = resp_pic / 100,
          j_score = j_score - 0.5) %>% 
-  lme4::glmer(acc_recall ~ interest * j_score + (1 | subj_num), data = ., family = "binomial") %>% 
+  lme4::glmer(acc_recall ~ resp_pic * j_score + (1 | subj_num), data = ., family = "binomial") %>% 
   summary()
 ```
 
@@ -562,6 +590,32 @@ retrieval %>%
 
 ---
 
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall),
+         j_score_binary = j_score > 0.72) %>%
+  ggplot(aes(x = resp_source, y = acc_recall, color = cut_number(j_score, 4), fill = cut_number(j_score, 4))) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth( method = "glm", method.args = list(family = "binomial"), alpha = 0.2) + 
+  labs(x = "Source recognition accuracy", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+---
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = as.numeric(acc_recall > 0),
+         resp_source = resp_source / 100,
+         j_score = j_score - 0.5) %>% 
+  lme4::glmer(acc_recall ~ resp_source * j_score + (1 | subj_num), data = ., family = "binomial") %>% 
+  summary()
+```
+
+---
+
 ### Does _source_ retrieval predict _photo_ retrieval?
 
 ```{r}
@@ -571,6 +625,18 @@ retrieval %>%
   geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) + 
   scale_color_viridis_c() +
   scale_fill_viridis_c() +
+  labs(x = "Source recognition accuracy", y = "Photo recognition accuracy") +
+  theme_bw()
+```
+
+---
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  ggplot(aes(x = resp_source, y = resp_pic, color = cut_number(j_score, 5), fill = cut_number(j_score, 5))) + 
+  geom_point(alpha = 0.1) + 
+  geom_smooth( method = "lm", alpha = 0.2) + 
   labs(x = "Source recognition accuracy", y = "Photo recognition accuracy") +
   theme_bw()
 ```
@@ -593,15 +659,27 @@ retrieval %>%
 
 ---
 
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  ggplot(aes(x = interest, y = acc_recall, color = cut_number(j_score, 4), fill = cut_number(j_score, 4))) + 
+  geom_jitter(alpha = 0.3, height = 0.05) + 
+  geom_smooth( method = "glm", method.args = list(family = "binomial"), alpha = 0.2) + 
+  labs(x = "Interest in fact at encoding", y = "Fact recall accuracy (generous)") +
+  theme_bw()
+```
+
+---
+
 ### Does interest at encoding predict _photo_ retrieval?
 
 ```{r}
 retrieval %>% 
-  ggplot(aes(x = interest, y = resp_pic, color = j_score, fill = j_score)) + 
-  geom_point(alpha = 0.3) + 
-  geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) + 
-  scale_color_viridis_c() +
-  scale_fill_viridis_c() +
+  # filter(already_knew == "none") %>% 
+  ggplot(aes(x = interest, y = resp_pic, color = cut_number(j_score, 4), fill = cut_number(j_score, 4))) + 
+  geom_point(alpha = 0.1) + 
+  geom_smooth(method = "lm", alpha = 0.2) + 
   labs(x = "Interest in fact at encoding", y = "Photo recognition accuracy") +
   theme_bw()
 ```
@@ -612,11 +690,10 @@ retrieval %>%
 
 ```{r}
 retrieval %>% 
-  ggplot(aes(x = interest, y = resp_source, color = j_score, fill = j_score)) + 
-  geom_point(alpha = 0.3) + 
-  geom_smooth(aes(group = subj_num), method = "lm", se = FALSE) + 
-  scale_color_viridis_c() +
-  scale_fill_viridis_c() +
+  filter(already_knew == "none") %>% 
+  ggplot(aes(x = interest, y = resp_source, color = cut_number(j_score, 4), fill = cut_number(j_score, 4))) + 
+  geom_point(alpha = 0.1) + 
+  geom_smooth(method = "lm", alpha = 0.2) + 
   labs(x = "Interest in fact at encoding", y = "Source recognition accuracy") +
   theme_bw()
 ```
