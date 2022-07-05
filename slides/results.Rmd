@@ -1,0 +1,340 @@
+---
+title: "Preliminary (quick and dirty) results"
+subtitle: "J-Study"  
+author: 
+  - "Monica Thieu"
+  - "Lauren Wilkins"
+institute: "Columbia University Dept of Psychology"
+date: 'Updated: `r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  dev = "svglite", fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = FALSE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE
+)
+
+require(xaringanthemer)
+source(here::here("R", "get_cleaned_data.R"))
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+style_mono_accent(
+  base_color = "#0046a6"
+)
+```
+
+class: inverse, middle
+
+# Demographics
+
+---
+
+### More men than women, but age does not appear correlated with gender
+
+```{r}
+q_google_demos %>% 
+  ggplot(aes(x = age, fill = gender)) +
+  geom_histogram(position = "identity", alpha = 0.5, binwidth = 2) +
+  scale_y_continuous(breaks = scales::breaks_extended(6))
+```
+
+---
+
+### What is our sample spread of trivia expertise?
+
+```{r}
+j_exp %>% 
+  ggplot(aes(x = j_score)) +
+  geom_histogram(binwidth = .05) +
+  geom_vline(xintercept = 0.7, linetype = "dotted") +
+  annotate("text",
+           x = .67,
+           y = 20,
+           label = "Approx cutoff for Jeopardy callback",
+           hjust = 1) +
+  labs(x = "Expertise score (fraction correct out of 50 questions)",
+       y = "count")
+```
+
+---
+
+class: inverse, middle
+
+# Encoding
+
+---
+
+### Trivia experts tend to know more encoding facts already
+
+```{r}
+encoding %>% 
+  group_by(subj_num, j_score, group) %>% 
+  summarize(pct_novel = sum(!is.na(already_knew) & already_knew == "none")) %>% 
+  ggplot(aes(x = j_score, y = pct_novel, color = group, fill = group)) +
+  geom_hline(yintercept = 40, linetype = "dotted") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Trivia expertise", y = "# museum facts rated as novel") +
+  theme_bw()
+```
+
+---
+
+### Trivia experts might be more interested at encoding, but not by much
+
+```{r}
+this_cor <- encoding %>%
+  group_by(subj_num, j_score) %>% 
+  summarize(interest = median(resp)) %$% 
+  cor(j_score, interest) %>% 
+  round(2)
+```
+
+```{r}
+encoding %>% 
+  group_by(subj_num, j_score) %>% 
+  summarize(resp_median = median(resp),
+            q25 = quantile(resp, .25),
+            q75 = quantile(resp, .75)) %>% 
+  ggplot(aes(x = j_score, y = resp_median)) +
+  geom_errorbar(aes(ymin = q25, ymax = q75), width = 0, alpha = 0.5) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Expertise score",
+       y = "P's median interest (across facts)") +
+  theme_bw()
+```
+
+---
+
+### Trivia experts might be more interested at encoding, but not by much
+
+Quick and dirty maximum-likelihood linear regression
+
+Formula: `interest ~ j_score + already_knew + (1 | subj_num)`
+
+```{r}
+encoding %>% 
+  mutate(j_score = j_score - 0.7) %>% 
+  lme4::lmer(resp ~ j_score + already_knew + (1 | subj_num), data = .) %>% 
+  broom.mixed::tidy() %>%
+  filter(effect == "fixed") %>% 
+  select(term:statistic) %>% 
+  mutate(across(where(is.numeric), signif, digits = 3)) %>% 
+  knitr::kable()
+```
+
+---
+
+class: inverse, middle
+
+# Retrieval
+
+---
+
+### Recall is higher when people already know the facts (duh)
+
+Accordingly, all subsequent results involving fact retrieval are shown only for facts rated as novel at encoding.
+
+Excluding facts known at encoding should not introduce collider bias into the retrieval results, because recall cannot cause prior knowledge at encoding.
+
+```{r}
+retrieval %>% 
+  filter(!is.na(already_knew)) %>% 
+  group_by(subj_num, already_knew) %>% 
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = already_knew, y = acc_recall)) +
+  geom_violin() +
+  labs(x = "Fact prior knowledge at encoding", y = "% correct recall") +
+  theme_bw()
+```
+
+---
+
+### Trivia experts show better recall for novel facts
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  group_by(subj_num, j_score) %>% 
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = j_score, y = acc_recall)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Expertise score", y = "% correct recall for novel facts") +
+  theme_bw()
+```
+
+---
+
+### Trivia experts' fact recall is _not_ driven by interest at encoding
+
+.pull-left[
+
+Formula: `acc_recall ~ j_score + (1 | subj_num)`
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = as.numeric(acc_recall > 0),
+         j_score = j_score - 0.7) %>% 
+  lme4::glmer(acc_recall ~ j_score + (1 | subj_num), data = ., family = "binomial") %>%
+  broom.mixed::tidy() %>%
+  filter(effect == "fixed") %>% 
+  select(term:statistic) %>% 
+  mutate(across(where(is.numeric), signif, digits = 3)) %>% 
+  knitr::kable()
+```
+
+]
+
+.pull-right[
+
+Formula: `acc_recall ~ j_score + interest + (1 + interest | subj_num)`
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = as.numeric(acc_recall > 0),
+         j_score = j_score - 0.7,
+         interest = (interest / 100) - 0.5) %>% 
+  lme4::glmer(acc_recall ~ j_score + interest + (1 + interest | subj_num), data = ., family = "binomial") %>%
+  broom.mixed::tidy() %>%
+  filter(effect == "fixed") %>% 
+  select(term:statistic) %>% 
+  mutate(across(where(is.numeric), signif, digits = 3)) %>% 
+  knitr::kable()
+```
+
+]
+
+---
+
+### Trivia experts _don't_ show better photo memory
+
+```{r}
+retrieval %>%
+  mutate(across(c(resp_pic, resp_source),
+                ~if_else(. > 0, 1L, 0L))) %>% 
+  group_by(subj_num, j_score) %>% 
+  summarize(acc_pic = mean(resp_pic),
+            acc_source = mean(resp_source)) %>% 
+  pivot_longer(cols = starts_with("acc"),
+               names_to = "memory_type",
+               values_to = "acc",
+               names_prefix = "acc_") %>% 
+  ggplot(aes(x = j_score, y = acc, color = memory_type, fill = memory_type)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)") +
+  theme_bw()
+```
+
+---
+
+### _Photo_ recognition predicts _fact_ recall, slightly more so for experts
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  group_by(subj_num, j_score, resp_pic) %>%
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = resp_pic, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
+  geom_line(aes(group = subj_num), alpha = 0.1) +
+  geom_smooth(method = "lm", alpha = 0.2) + 
+  scale_x_continuous(breaks = 0:1) +
+  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  labs(x = "Photo recognition accuracy",
+       y = "Fact recall accuracy (generous)",
+       color = "Expertise tertile",
+       fill = "Expertise tertile") +
+  theme_bw()
+```
+
+---
+
+### _Photo_ recognition predicts _fact_ recall, slightly more so for experts
+
+Quick and dirty maximum-likelihood logistic regression
+
+Formula: `acc_recall ~ resp_pic * j_score + (1 + resp_pic | subj_num)`
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = as.numeric(acc_recall > 0),
+         across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         j_score = j_score - 0.7) %>% 
+  lme4::glmer(acc_recall ~ resp_pic * j_score + (1 + resp_pic | subj_num), data = ., family = "binomial") %>%
+  broom.mixed::tidy() %>%
+  filter(effect == "fixed") %>% 
+  select(term:statistic) %>% 
+  mutate(across(where(is.numeric), signif, digits = 3)) %>% 
+  knitr::kable()
+```
+
+---
+
+### _Source_ recognition predicts _fact_ recall for everyone
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  group_by(subj_num, j_score, resp_source) %>%
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = resp_source, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
+  geom_line(aes(group = subj_num), alpha = 0.1) +
+  geom_smooth(method = "lm", alpha = 0.2) + 
+  scale_x_continuous(breaks = 0:1) +
+  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  labs(x = "Source recognition accuracy",
+       y = "Fact recall accuracy (generous)",
+       color = "Expertise tertile",
+       fill = "Expertise tertile") +
+  theme_bw()
+```
+
+---
+
+### _Source_ recognition predicts _fact_ recall for everyone
+
+Quick and dirty maximum-likelihood logistic regression
+
+Formula: `acc_recall ~ resp_source * j_score + (1 + resp_source | subj_num)`
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = as.numeric(acc_recall > 0),
+         across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         j_score = j_score - 0.7) %>% 
+  lme4::glmer(acc_recall ~ resp_source * j_score + (1 + resp_source | subj_num), data = ., family = "binomial") %>%
+  broom.mixed::tidy() %>%
+  filter(effect == "fixed") %>% 
+  select(term:statistic) %>% 
+  mutate(across(where(is.numeric), signif, digits = 3)) %>% 
+  knitr::kable()
+```
+

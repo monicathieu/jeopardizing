@@ -208,8 +208,9 @@ class: inverse, middle
 encoding %>% 
   distinct(subj_num, group, category) %>% 
   mutate(category = fct_relevel(category, "arms", "gems", "musi")) %>% 
-  ggplot(aes(x = category, fill = group)) +
+  ggplot(aes(x = group, fill = category)) +
   geom_bar() +
+  geom_text(aes(label = category), stat = "count", vjust = 1.5, colour = "white") +
   theme(legend.position = 0:1, legend.justification = 0:1, legend.background = element_blank())
 ```
 
@@ -241,12 +242,12 @@ encoding %>%
 ```{r}
 encoding %>% 
   group_by(subj_num, j_score) %>% 
-  summarize(resp = mean(resp)) %>% 
+  summarize(resp = median(resp)) %>% 
   ggplot(aes(x = j_score, y = resp)) +
   geom_point() +
   geom_smooth(method = "lm") +
   labs(x = "Expertise score",
-       y = "P's mean interest (across facts)")
+       y = "P's median interest (across facts)")
 ```
 
 ---
@@ -362,8 +363,6 @@ this_cor <- r_pics %>%
   round(2)
 ```
 
-Pearson correlation shown: `r this_cor`
-
 ```{r}
 r_pics %>%
   group_by(subj_num, j_score) %>% 
@@ -371,7 +370,8 @@ r_pics %>%
   ggplot(aes(x = j_score, y = acc)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  labs(x = "Expertise score", y = " Mean accuracy WITH confidence (-50 to 50)")
+  labs(x = "Expertise score", y = "Mean accuracy WITH confidence (-50 to 50)",
+       title = paste("Pearson correlation:", this_cor))
 ```
 
 ---
@@ -388,8 +388,6 @@ this_cor <- r_pics %>%
   round(2)
 ```
 
-Pearson correlation shown: `r this_cor`
-
 ```{r}
 r_pics %>%
   group_by(subj_num, j_score) %>% 
@@ -397,7 +395,8 @@ r_pics %>%
   ggplot(aes(x = j_score, y = acc)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)")
+  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)",
+       title = paste("Pearson correlation:", this_cor))
 ```
 
 ---
@@ -412,8 +411,6 @@ this_cor <- r_source %>%
   round(2)
 ```
 
-Pearson correlation shown: `r this_cor`
-
 ```{r}
 r_source %>%
   group_by(subj_num, j_score) %>% 
@@ -421,7 +418,8 @@ r_source %>%
   ggplot(aes(x = j_score, y = acc)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  labs(x = "Expertise score", y = " Mean accuracy WITH confidence (-50 to 50)")
+  labs(x = "Expertise score", y = " Mean accuracy WITH confidence (-50 to 50)",
+       title = paste("Pearson correlation:", this_cor))
 ```
 
 ---
@@ -436,8 +434,6 @@ this_cor <- r_source %>%
   round(2)
 ```
 
-Pearson correlation shown: `r this_cor`
-
 ```{r}
 r_source %>%
   group_by(subj_num, j_score) %>% 
@@ -445,7 +441,8 @@ r_source %>%
   ggplot(aes(x = j_score, y = acc)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)")
+  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)",
+       title = paste("Pearson correlation:", this_cor))
 ```
 
 ---
