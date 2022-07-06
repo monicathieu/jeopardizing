@@ -35,7 +35,10 @@ source(here::here("R", "get_cleaned_data.R"))
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
 style_mono_accent(
-  base_color = "#0046a6"
+  base_color = "#0046a6",
+  text_font_google = google_font("Lora"),
+  header_font_google = google_font("Nunito"),
+  code_font_google = google_font("Fira Code")
 )
 ```
 
@@ -49,7 +52,12 @@ class: inverse, middle
 
 ```{r}
 q_google_demos %>% 
-  ggplot(aes(x = age, fill = gender)) +
+  left_join(q_google_demos %>%
+              count(gender) %>%
+              mutate(gender_n = glue::glue("{gender} (n = {n})")) %>%
+              select(-n),
+            by = "gender") %>% 
+  ggplot(aes(x = age, fill = gender_n)) +
   geom_histogram(position = "identity", alpha = 0.5, binwidth = 2) +
   scale_y_continuous(breaks = scales::breaks_extended(6))
 ```
@@ -230,6 +238,7 @@ retrieval %>%
 
 ```{r}
 retrieval %>%
+  # filter(already_knew == "none") %>% 
   mutate(across(c(resp_pic, resp_source),
                 ~if_else(. > 0, 1L, 0L))) %>% 
   group_by(subj_num, j_score) %>% 
