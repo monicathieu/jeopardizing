@@ -141,7 +141,7 @@ j_recall %>%
 
 ---
 
-### Metamemory state counts
+### Metamemory state counts (correct trials only!)
 
 ```{r}
 j_meta %>%
@@ -150,13 +150,31 @@ j_meta %>%
   filter(acc_recall) %>% 
   ggplot(aes(x = subj_num, fill = resp)) +
   geom_bar() +
-  labs(x = "Participant", y = "# facts labeled with that memory state", fill = "Memory state") +
+  labs(x = "Participant", y = "# correctly recalled facts labeled with that memory state", fill = "Memory state") +
   theme_bw() +
   theme(axis.text.x = element_blank(),
         legend.position = 0:1,
         legend.justification = 0:1,
         legend.background = element_blank())
 ```
+
+---
+
+### Recall accuracy by metamemory state
+
+```{r}
+j_recall %>%
+  select(subj_num, j_score, question, answer, acc_recall) %>%
+  left_join(j_meta %>% select(subj_num, question, answer, metamemory = resp),
+            by = c("subj_num", "question", "answer")) %>%
+  mutate(metamemory = coalesce(metamemory, "Don't Know")) %>%
+  group_by(subj_num, metamemory) %>%
+  summarize(acc = mean(acc_recall),
+            n_trials = n()) %>%
+  ggplot(aes(x = metamemory, y = acc)) +
+  geom_boxplot()
+```
+
 
 ---
 
