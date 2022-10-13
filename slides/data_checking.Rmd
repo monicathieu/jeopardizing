@@ -307,6 +307,22 @@ retrieval %>%
   labs(x = "Fact prior knowledge at encoding", y = "% correct recall")
 ```
 
+## Novel fact recall
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  group_by(subj_num, j_score) %>% 
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  left_join(q_google_demos, by = "subj_num") %>% 
+  filter(gender %in% c("male", "female")) %>% 
+  ggplot(aes(x = j_score, y = acc_recall, color = gender, fill = gender)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Expertise score", y = "% correct recall for novel facts") +
+  theme_bw()
+```
+
 ## Photo recognition
 
 A-A' 2AFC with similar lure

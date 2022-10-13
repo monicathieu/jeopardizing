@@ -31,6 +31,22 @@ knitr::opts_chunk$set(
 
 require(xaringanthemer)
 source(here::here("R", "get_cleaned_data.R"))
+
+count_streak <- function (acc_col, min_streak_length = 3) {
+  streak_count <- 0
+  current_streak <- 0
+  for (i in 1:length(acc_col)) {
+    if (acc_col[i] == 0) current_streak <- 0
+    if (acc_col[i] == 1) {
+      current_streak <- current_streak + acc_col[i]
+      if (current_streak == min_streak_length) {
+        # Only triggered once per streak because using == not >=
+        streak_count <- streak_count + 1
+      }
+    }
+  }
+  return (streak_count)
+}
 ```
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
@@ -48,6 +64,35 @@ class: inverse, middle
 
 ---
 
+### Trivia experts _don't_ show better photo memory
+
+```{r}
+retrieval %>%
+  filter(already_knew == "none") %>% 
+  mutate(across(c(resp_pic, resp_source, acc_recall),
+                ~if_else(. > 0, 1L, 0L))) %>% 
+  group_by(subj_num, j_score) %>% 
+  summarize(acc_pic = mean(resp_pic),
+            acc_source = mean(resp_source),
+            acc_fact = mean(acc_recall)) %>% 
+  pivot_longer(cols = starts_with("acc"),
+               names_to = "memory_type",
+               values_to = "acc",
+               names_prefix = "acc_") %>% 
+  ggplot(aes(x = j_score, y = acc, color = memory_type, fill = memory_type)) +
+  geom_hline(yintercept = 0.5, linetype = "dotted") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ memory_type) +
+  guides(color = "none", fill = "none") +
+  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)",
+       title = "Memory as a function of trivia expertise",
+       subtitle = "Only trials with fully novel facts") +
+  theme_bw()
+```
+
+---
+
 ### _Photo_ recognition predicts _fact_ recall, slightly more so for experts
 
 ```{r}
@@ -57,7 +102,7 @@ retrieval %>%
          acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
   group_by(subj_num, j_score, resp_pic) %>%
   summarize(acc_recall = mean(acc_recall)) %>% 
-  ggplot(aes(x = resp_pic, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
+  ggplot(aes(x = resp_pic, y = acc_recall, color = fct_rev(cut_number(j_score, 2)), fill = fct_rev(cut_number(j_score, 1)))) + 
   geom_line(aes(group = subj_num), alpha = 0.1) +
   geom_smooth(method = "lm", alpha = 0.2) + 
   scale_x_continuous(breaks = 0:1) +
@@ -65,10 +110,43 @@ retrieval %>%
   scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
   labs(x = "Photo recognition accuracy",
        y = "Fact recall accuracy (generous)",
+       color = "Expertise median split",
+       fill = "Expertise median split") +
+  theme_bw()
+```
+???
+
+Main figure subplots: coefplot, a better version of this with median split and as close to trialwise data as possible, with Bayesian model fit ribbons on top
+
+---
+
+### _Source_ recognition predicts _fact_ recall for everyone
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  group_by(subj_num, j_score, resp_source) %>%
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = resp_source, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
+  geom_line(aes(group = subj_num), alpha = 0.1) +
+  geom_smooth(method = "lm", alpha = 0.2) + 
+  scale_x_continuous(breaks = 0:1) +
+  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  labs(x = "Source recognition accuracy",
+       y = "Fact recall accuracy (generous)",
        color = "Expertise tertile",
        fill = "Expertise tertile") +
   theme_bw()
 ```
+
+???
+
+Same plot subfigures as the previous
+
+Also, see about running a model with pic/source as a covariate to explicitly test the difference in interactions
 
 ---
 
@@ -169,7 +247,7 @@ Formula: `interest ~ j_score + already_knew + (1 | subj_num)`
 
 ```{r}
 encoding %>% 
-  mutate(j_score = j_score - 0.7) %>% 
+  mutate(j_score = (j_score - 0.7) * 10) %>% 
   lme4::lmer(resp ~ j_score + already_knew + (1 | subj_num), data = .) %>% 
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
@@ -231,7 +309,7 @@ Formula: `acc_recall ~ j_score + (1 | subj_num)`
 retrieval %>% 
   filter(already_knew == "none") %>% 
   mutate(acc_recall = as.numeric(acc_recall > 0),
-         j_score = j_score - 0.7) %>% 
+         j_score = (j_score - 0.7) * 10) %>% 
   lme4::glmer(acc_recall ~ j_score + (1 | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
@@ -252,7 +330,8 @@ retrieval %>%
   mutate(acc_recall = as.numeric(acc_recall > 0),
          # scaled to units of 0.1
          j_score = (j_score - 0.7) * 10,
-         interest = (interest / 100) - .5) %>% 
+         # scaled to units of 0.1 where 1 is the full scale
+         interest = (interest / 10) - 5) %>% 
   lme4::glmer(acc_recall ~ j_score + interest + (1 + interest | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
@@ -262,29 +341,6 @@ retrieval %>%
 ```
 
 ]
-
----
-
-### Trivia experts _don't_ show better photo memory
-
-```{r}
-retrieval %>%
-  # filter(already_knew == "none") %>% 
-  mutate(across(c(resp_pic, resp_source),
-                ~if_else(. > 0, 1L, 0L))) %>% 
-  group_by(subj_num, j_score) %>% 
-  summarize(acc_pic = mean(resp_pic),
-            acc_source = mean(resp_source)) %>% 
-  pivot_longer(cols = starts_with("acc"),
-               names_to = "memory_type",
-               values_to = "acc",
-               names_prefix = "acc_") %>% 
-  ggplot(aes(x = j_score, y = acc, color = memory_type, fill = memory_type)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  labs(x = "Expertise score", y = " Mean accuracy WITHOUT confidence (0 to 1)") +
-  theme_bw()
-```
 
 ---
 
@@ -300,38 +356,14 @@ retrieval %>%
   mutate(acc_recall = as.numeric(acc_recall > 0),
          # across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
          across(c(resp_pic, resp_source), ~(. / 100)),
-         interest = (interest / 100) - 0.5,
-         j_score = j_score - 0.7) %>% 
+         interest = (interest / 10) - 5,
+         j_score = (j_score - 0.7) * 10) %>% 
   lme4::glmer(acc_recall ~ resp_pic * j_score + interest + (1 + resp_pic | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
   select(term:statistic) %>% 
   mutate(across(where(is.numeric), signif, digits = 3)) %>% 
   knitr::kable()
-```
-
----
-
-### _Source_ recognition predicts _fact_ recall for everyone
-
-```{r}
-retrieval %>% 
-  filter(already_knew == "none") %>% 
-  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
-         acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
-  group_by(subj_num, j_score, resp_source) %>%
-  summarize(acc_recall = mean(acc_recall)) %>% 
-  ggplot(aes(x = resp_source, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
-  geom_line(aes(group = subj_num), alpha = 0.1) +
-  geom_smooth(method = "lm", alpha = 0.2) + 
-  scale_x_continuous(breaks = 0:1) +
-  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
-  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
-  labs(x = "Source recognition accuracy",
-       y = "Fact recall accuracy (generous)",
-       color = "Expertise tertile",
-       fill = "Expertise tertile") +
-  theme_bw()
 ```
 
 ---
@@ -347,7 +379,7 @@ retrieval %>%
   filter(already_knew == "none") %>% 
   mutate(acc_recall = as.numeric(acc_recall > 0),
          across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
-         j_score = j_score - 0.7) %>% 
+         j_score = (j_score - 0.7) * 10) %>% 
   lme4::glmer(acc_recall ~ resp_source * j_score + (1 + resp_source | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
@@ -399,7 +431,7 @@ retrieval %>%
          # so this is run only using trials where people got _either_ source _or_ pic
          # aka the difference between getting one and getting both
          resp_either = resp_pic + resp_source - 1,
-         j_score = j_score - 0.7) %>% 
+         j_score = (j_score - 0.7) * 10) %>% 
   filter(resp_either > -1) %>% 
   lme4::glmer(acc_recall ~ resp_either * j_score + (1 + resp_either | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
