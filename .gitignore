@@ -42,6 +42,7 @@ rsconnect/
 
 # Xaringan presentation files that can be regenerated?
 slides/*/*
+slides/*.html
 
 # Folder of stuff not to sync, obvi
 ignore/*
