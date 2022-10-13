@@ -5,33 +5,21 @@ author: "Monica Thieu & Lauren Wilkins"
 institute: "Columbia University Dept of Psychology"
 date: "`r Sys.Date()`"
 output:
-  xaringan::moon_reader:
-    css: ["theme.css", "fonts.css"]
-    lib_dir: libs
-    nature:
-      highlightStyle: github
-      highlightLines: true
-      countIncrementalSlides: false
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
-                      dev = "svglite",
                       message = FALSE,
-                      warning = FALSE,
-                      fig.asp = 7/10)
+                      warning = FALSE)
 
 source(here::here("R", "get_cleaned_data.R"))
 ```
 
-
-class: inverse, middle
-
 # Demographics
 
----
-
-### What is the age and gender breakdown?
+What is the age and gender breakdown?
 
 ```{r}
 q_google_demos %>% 
@@ -39,15 +27,10 @@ q_google_demos %>%
   geom_histogram(position = "identity", alpha = 0.5, binwidth = 2)
 ```
 
----
-
-class: inverse, middle
 
 # Trivia expertise assessment
 
----
-
-### What is our sample spread of trivia expertise?
+What is our sample spread of trivia expertise?
 
 ```{r}
 j_exp %>% 
@@ -57,9 +40,7 @@ j_exp %>%
   labs(x = "Expertise score")
 ```
 
----
-
-### Are men and women participants balanced on trivia expertise?
+Are men and women participants balanced on trivia expertise?
 
 ```{r}
 j_exp %>% 
@@ -71,9 +52,7 @@ j_exp %>%
   labs(x = "Expertise score")
 ```
 
----
-
-### Do older participants know more trivia?
+Do older participants know more trivia?
 
 ```{r}
 j_exp %>% 
@@ -86,9 +65,7 @@ j_exp %>%
   labs(y = "Expertise score")
 ```
 
----
-
-### Do Ps accurately assess their own trivia skill?
+Do Ps accurately assess their own trivia skill?
 
 ```{r}
 q_trivia_demos %>% 
@@ -105,8 +82,6 @@ q_trivia_demos %>%
   theme_bw()
 ```
 
----
-
 ```{r}
 j_recall %>% 
   mutate(resp_conf = coalesce(resp_conf, 0), 
@@ -119,9 +94,7 @@ j_recall %>%
   scale_color_viridis_c()
 ```
 
----
-
-### Trivia recall by confidence
+## Trivia recall by confidence
 
 I still haven't sorted out the best way to think about this, or how important it really is, we see a vaguely Dunning-Krugery effect where participants with lower overall scores tend to be more wrong at higher confidence.
 
@@ -139,9 +112,9 @@ j_recall %>%
   theme_bw()
 ```
 
----
+## Trivia recall metamemory
 
-### Metamemory state counts (correct trials only!)
+Metamemory state counts (correct trials only!)
 
 ```{r}
 j_meta %>%
@@ -158,9 +131,7 @@ j_meta %>%
         legend.background = element_blank())
 ```
 
----
-
-### Recall accuracy by metamemory state
+Recall accuracy by metamemory state
 
 ```{r}
 j_recall %>%
@@ -175,10 +146,7 @@ j_recall %>%
   geom_boxplot()
 ```
 
-
----
-
-### Metamemory state relative percentages
+Metamemory state relative percentages
 
 ```{r}
 j_meta %>%
@@ -194,13 +162,7 @@ j_meta %>%
   theme(axis.text.x = element_blank())
 ```
 
----
-
-class: inverse, middle
-
 # Self-report measures
-
----
 
 ```{r}
 q_trivia_demos %>%
@@ -212,15 +174,9 @@ q_trivia_demos %>%
   facet_wrap(~ var)
 ```
 
----
-
-class: inverse, middle
-
 # Museum task encoding
 
----
-
-### How many people got which categories?
+How many people got which categories?
 
 ```{r}
 encoding %>% 
@@ -236,9 +192,7 @@ encoding %>%
 
 Check whether category assignment is related to expertise
 
----
-
-### Are some categories more interesting than others?
+Are some categories more interesting than others?
 
 ```{r}
 encoding %>% 
@@ -253,9 +207,7 @@ encoding %>%
         legend.direction = "horizontal")
 ```
 
----
-
-### Are trivia experts more interested overall?
+Are trivia experts more interested overall?
 
 ```{r}
 encoding %>% 
@@ -268,8 +220,6 @@ encoding %>%
        y = "P's median interest (across facts)")
 ```
 
----
-
 ```{r}
 encoding %>% 
   ggplot(aes(x = subj_num, fill = fct_rev(already_knew))) +
@@ -281,15 +231,9 @@ encoding %>%
   theme(axis.text.x = element_blank())
 ```
 
----
-
-class: inverse, middle
-
 # Museum task retrieval
 
----
-
-### Fact recall by question order/chunk type
+## Fact recall by question order/chunk type
 
 ```{r}
 retrieval_temp <- retrieval %>% 
@@ -319,9 +263,7 @@ retrieval_temp %>%
   theme_bw()
 ```
 
----
-
-### Fact recall by chunk type
+## Fact recall by chunk type
 
 Now filtered to include only not-previously-known facts
 
@@ -353,9 +295,7 @@ Fix this graph to filter for didn't already know
 
 Look at RT measures as a function of chunk type! Difference between start and finish normalized by answer length?
 
----
-
-### Is recall higher when people already know (some of) the facts?
+## Is recall higher when people already know (some of) the facts?
 
 ```{r}
 retrieval %>% 
@@ -367,9 +307,7 @@ retrieval %>%
   labs(x = "Fact prior knowledge at encoding", y = "% correct recall")
 ```
 
----
-
-### Photo recognition
+## Photo recognition
 
 A-A' 2AFC with similar lure
 
@@ -392,9 +330,7 @@ r_pics %>%
        title = paste("Pearson correlation:", this_cor))
 ```
 
----
-
-### Photo recognition
+## Photo recognition
 
 A-A' 2AFC with similar lure
 
@@ -417,9 +353,7 @@ r_pics %>%
        title = paste("Pearson correlation:", this_cor))
 ```
 
----
-
-### Source memory for which museum
+## Source memory for which museum
 
 ```{r}
 this_cor <- r_source %>%
@@ -439,10 +373,6 @@ r_source %>%
   labs(x = "Expertise score", y = " Mean accuracy WITH confidence (-50 to 50)",
        title = paste("Pearson correlation:", this_cor))
 ```
-
----
-
-### Source memory for which museum
 
 ```{r}
 this_cor <- r_source %>%
@@ -471,7 +401,7 @@ class: inverse, middle
 
 ---
 
-### Does _photo_ retrieval predict _fact_ retrieval?
+## Does _photo_ retrieval predict _fact_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -493,10 +423,6 @@ retrieval %>%
 
 Sanity check these against the apparent effect where high experts seem to be doing worse on photo memory?
 
----
-
-### Does _photo_ retrieval predict _fact_ retrieval?
-
 ```{r}
 retrieval %>% 
   filter(already_knew == "none") %>% 
@@ -507,9 +433,7 @@ retrieval %>%
   summary()
 ```
 
----
-
-### Does _source_ retrieval predict _fact_ retrieval?
+## Does _source_ retrieval predict _fact_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -534,10 +458,6 @@ retrieval %>%
 
 Sanity check this one as well
 
----
-
-### Does _source_ retrieval predict _fact_ retrieval?
-
 ```{r}
 retrieval %>% 
   filter(already_knew == "none") %>% 
@@ -549,9 +469,7 @@ retrieval %>%
   summary()
 ```
 
----
-
-### Does _source_ retrieval predict _photo_ retrieval?
+## Does _source_ retrieval predict _photo_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -568,10 +486,6 @@ retrieval %>%
         legend.background = element_blank())
 ```
 
----
-
-### Does _source_ retrieval predict _photo_ retrieval?
-
 ```{r}
 retrieval %>% 
   filter(already_knew == "none") %>% 
@@ -583,9 +497,7 @@ retrieval %>%
   summary()
 ```
 
----
-
-### Does interest at encoding predict _fact_ retrieval?
+## Does interest at encoding predict _fact_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -607,9 +519,7 @@ retrieval %>%
 
 Include interest in the other models
 
----
-
-### Does interest at encoding predict _photo_ retrieval?
+## Does interest at encoding predict _photo_ retrieval?
 
 ```{r}
 retrieval %>% 
@@ -626,9 +536,7 @@ retrieval %>%
         legend.background = element_blank())
 ```
 
----
-
-### Does interest at encoding predict _source_ retrieval?
+## Does interest at encoding predict _source_ retrieval?
 
 ```{r}
 retrieval %>% 

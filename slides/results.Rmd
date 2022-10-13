@@ -44,6 +44,36 @@ style_mono_accent(
 
 class: inverse, middle
 
+# Proposed main figures
+
+---
+
+### _Photo_ recognition predicts _fact_ recall, slightly more so for experts
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
+  group_by(subj_num, j_score, resp_pic) %>%
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = resp_pic, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
+  geom_line(aes(group = subj_num), alpha = 0.1) +
+  geom_smooth(method = "lm", alpha = 0.2) + 
+  scale_x_continuous(breaks = 0:1) +
+  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  labs(x = "Photo recognition accuracy",
+       y = "Fact recall accuracy (generous)",
+       color = "Expertise tertile",
+       fill = "Expertise tertile") +
+  theme_bw()
+```
+
+---
+
+class: inverse, middle
+
 # Demographics
 
 ---
@@ -220,8 +250,9 @@ Formula: `acc_recall ~ j_score + interest + (1 + interest | subj_num)`
 retrieval %>% 
   filter(already_knew == "none") %>% 
   mutate(acc_recall = as.numeric(acc_recall > 0),
-         j_score = j_score - 0.7,
-         interest = (interest / 100) - 0.5) %>% 
+         # scaled to units of 0.1
+         j_score = (j_score - 0.7) * 10,
+         interest = (interest / 100) - .5) %>% 
   lme4::glmer(acc_recall ~ j_score + interest + (1 + interest | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
@@ -259,30 +290,6 @@ retrieval %>%
 
 ### _Photo_ recognition predicts _fact_ recall, slightly more so for experts
 
-```{r}
-retrieval %>% 
-  filter(already_knew == "none") %>% 
-  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
-         acc_recall = if_else(acc_recall == 0.5, 1, acc_recall)) %>%
-  group_by(subj_num, j_score, resp_pic) %>%
-  summarize(acc_recall = mean(acc_recall)) %>% 
-  ggplot(aes(x = resp_pic, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
-  geom_line(aes(group = subj_num), alpha = 0.1) +
-  geom_smooth(method = "lm", alpha = 0.2) + 
-  scale_x_continuous(breaks = 0:1) +
-  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
-  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
-  labs(x = "Photo recognition accuracy",
-       y = "Fact recall accuracy (generous)",
-       color = "Expertise tertile",
-       fill = "Expertise tertile") +
-  theme_bw()
-```
-
----
-
-### _Photo_ recognition predicts _fact_ recall, slightly more so for experts
-
 Quick and dirty maximum-likelihood logistic regression
 
 Formula: `acc_recall ~ resp_pic * j_score + (1 + resp_pic | subj_num)`
@@ -291,9 +298,11 @@ Formula: `acc_recall ~ resp_pic * j_score + (1 + resp_pic | subj_num)`
 retrieval %>% 
   filter(already_knew == "none") %>% 
   mutate(acc_recall = as.numeric(acc_recall > 0),
-         across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         # across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         across(c(resp_pic, resp_source), ~(. / 100)),
+         interest = (interest / 100) - 0.5,
          j_score = j_score - 0.7) %>% 
-  lme4::glmer(acc_recall ~ resp_pic * j_score + (1 + resp_pic | subj_num), data = ., family = "binomial") %>%
+  lme4::glmer(acc_recall ~ resp_pic * j_score + interest + (1 + resp_pic | subj_num), data = ., family = "binomial") %>%
   broom.mixed::tidy() %>%
   filter(effect == "fixed") %>% 
   select(term:statistic) %>% 
@@ -347,3 +356,55 @@ retrieval %>%
   knitr::kable()
 ```
 
+---
+
+### _Combined_ recognition predicts _fact_ recall, slightly more so for experts
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         resp_either = resp_pic + resp_source,
+         acc_recall = as.integer(acc_recall > 0)) %>%
+  filter(resp_either > 0) %>% 
+  group_by(subj_num, j_score, resp_either) %>%
+  summarize(acc_recall = mean(acc_recall)) %>% 
+  ggplot(aes(x = resp_either, y = acc_recall, color = fct_rev(cut_number(j_score, 3)), fill = fct_rev(cut_number(j_score, 3)))) + 
+  geom_line(aes(group = subj_num), alpha = 0.1) +
+  geom_smooth(method = "lm", alpha = 0.2) + 
+  scale_x_continuous(breaks = 1:2) +
+  scale_color_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  scale_fill_viridis_d(begin = 0.2, end = 0.9, direction = -1) +
+  labs(x = "Joint associate recognition accuracy",
+       y = "Fact recall accuracy (generous)",
+       color = "Expertise tertile",
+       fill = "Expertise tertile") +
+  theme_bw()
+```
+
+---
+
+### _Combined_ recognition predicts _fact_ recall, slightly more so for experts
+
+Quick and dirty maximum-likelihood logistic regression
+
+Formula: `acc_recall ~ resp_either * j_score + (1 + resp_either | subj_num)`
+
+```{r}
+retrieval %>% 
+  filter(already_knew == "none") %>% 
+  mutate(acc_recall = as.numeric(acc_recall > 0),
+         across(c(resp_pic, resp_source), ~if_else(. > 0, 1L, 0L)),
+         # so, like 20% of participants have no retrieval trials where they missed on both source and pic
+         # so this is run only using trials where people got _either_ source _or_ pic
+         # aka the difference between getting one and getting both
+         resp_either = resp_pic + resp_source - 1,
+         j_score = j_score - 0.7) %>% 
+  filter(resp_either > -1) %>% 
+  lme4::glmer(acc_recall ~ resp_either * j_score + (1 + resp_either | subj_num), data = ., family = "binomial") %>%
+  broom.mixed::tidy() %>%
+  filter(effect == "fixed") %>% 
+  select(term:statistic) %>% 
+  mutate(across(where(is.numeric), signif, digits = 3)) %>% 
+  knitr::kable()
+```
