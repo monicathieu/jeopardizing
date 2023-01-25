@@ -1,15 +1,67 @@
 ---
 title: "J-Study manuscript"
 author: "Monica Thieu"
-date: "5/29/2020"
+date: "Updated `r Sys.Date()`"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+require(tidyverse)
+require(magrittr)
+load(here::here("ignore", "data", "plots_ms.rda"))
 ```
 
-# Intro
+# Figures and captions
+
+## Figure 3
+
+```{r}
+plot_demos
+```
+
+```{r}
+plot_expertise_hist
+```
+
+## Figure 4
+
+```{r}
+plot_fact_by_expertise
+```
+
+## Figure 5
+
+```{r}
+plot_coefs_fact_by_pic
+```
+
+```{r}
+plot_fixef_fact_by_pic
+```
+
+```{r}
+plot_pic_by_expertise
+```
+
+
+## Figure 6
+
+```{r}
+plot_coefs_fact_by_source
+```
+
+```{r}
+plot_fixef_fact_by_source
+```
+
+```{r}
+plot_source_by_expertise
+```
+
+
+<!--
+# OLD STUFF I FOUND IN HERE: Intro
 
 Derpy abstract for myself:
 
@@ -46,3 +98,4 @@ Basic outline:
     - [@Brandt:2017cd]
 - What research has been done on general knowledge capacity as its own memory construct?
 - Thus, the current study
+-->
