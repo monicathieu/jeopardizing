@@ -17,10 +17,6 @@
 # RStudio files
 .Rproj.user/
 
-# renv files
-renv/*
-.Rprofile
-
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
