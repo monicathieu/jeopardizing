@@ -1,5 +1,6 @@
 ## setup ----
 
+require(tidymodels)
 require(magrittr)
 require(rlang)
 require(tidyverse)
@@ -11,6 +12,16 @@ options(mc.cores = parallel::detectCores())
 source(here::here("R", "get_cleaned_data.R"))
 
 ## prep data further ----
+
+base_recipe <- recipe(retrieval) %>% 
+  step_cut(c(resp_pic, resp_source), breaks = 0) %>% 
+  step_cut(encoding_trial_num, breaks = 41) %>% 
+  step_range(interest, min = -5, max = 5) %>% 
+  step_range(j_score, min = -7, max = 3)
+  # step 1: binarize resp_pic and resp_source slider scores
+  # step 2: dummy variable for second block
+  # step 3: center and rescale interest to be width 10 instead of 100
+  # step 4: same for j-score but center at 0.7
 
 retrieval_modelsafe <- retrieval %>% 
   filter(already_knew == "none") %>% 
