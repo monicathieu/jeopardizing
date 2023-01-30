@@ -235,12 +235,12 @@ retrieval %>%
   summarize(acc_recall = mean(acc_recall))
 
 plot_fixef_fact_by_pic <- preplot_fixef_fact_by_pic %>% 
-  mutate(j_score = recode_factor(j_score,
-                          `2.5` = "upper half",
-                          `-2.5` = "lower half"),
-         resp_pic = recode_factor(resp_pic,
-                           `0` = "incorrect",
-                           `1` = "correct")) %>% 
+  mutate(j_score = recode_factor(as.character(j_score),
+                          `1` = "upper half",
+                          `-2` = "lower half"),
+         resp_pic = recode_factor(as.character(resp_pic),
+                           `-0.5` = "incorrect",
+                           `0.5` = "correct")) %>% 
   ggplot(aes(x = factor(resp_pic), y = acc_pred, color = j_score)) +
   geom_line(aes(group = interaction(subj_num, j_score)),
             data = retrieval %>% 
@@ -270,12 +270,12 @@ plot_fixef_fact_by_pic <- preplot_fixef_fact_by_pic %>%
         legend.justification = 0:1)
 
 plot_fixef_fact_by_source <- preplot_fixef_fact_by_source %>% 
-  mutate(j_score = recode_factor(j_score,
-                                 `2.5` = "upper half",
-                                 `-2.5` = "lower half"),
-         resp_source = recode_factor(resp_source,
-                                  `0` = "incorrect",
-                                  `1` = "correct")) %>% 
+  mutate(j_score = recode_factor(as.character(j_score),
+                                 `1` = "upper half",
+                                 `-2` = "lower half"),
+         resp_source = recode_factor(as.character(resp_source),
+                                  `-0.5` = "incorrect",
+                                  `0.5` = "correct")) %>% 
   ggplot(aes(x = factor(resp_source), y = acc_pred, color = j_score)) +
   geom_line(aes(group = interaction(subj_num, j_score)),
             data = retrieval %>% 
@@ -356,8 +356,8 @@ ggsave(here::here("ignore", "figs", "plot_slides_fact_by_interest.png"),
        height = 4,
        units = "in")
 
-ggsave(here::here("ignore", "figs", "plot_slides_photo_by_expertise.png"),
-       plot = plot_photo_by_expertise,
+ggsave(here::here("ignore", "figs", "plot_slides_pic_by_expertise.png"),
+       plot = plot_pic_by_expertise,
        device = "png",
        width = 4,
        height = 4,
