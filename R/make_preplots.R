@@ -1,5 +1,8 @@
 ## setup ----
 
+require(rstanarm)
+require(tidymodels)
+require(multilevelmod)
 require(magrittr)
 require(rlang)
 require(tidyverse)
@@ -12,6 +15,7 @@ load(here::here("ignore", "data", "models.rda"))
 
 posterior_preplot_params <- function (object) {
   out <- object %>%
+    extract_fit_engine() %>% 
     as.data.frame() %>%
     as_tibble() %>%
     mutate(iteration = 1:nrow(.)) %>%
@@ -24,7 +28,15 @@ posterior_preplot_params <- function (object) {
 }
 
 posterior_preplot_bysubj <- function (object, newdata, pred_col = "y_pred", draws = 1000) {
+  
+  preproc <- object %>% 
+    extract_recipe()
+  
+  newdata <- preproc %>% 
+    bake(new_data = newdata)
+  
   out <- object %>%
+    extract_fit_engine() %>% 
     rstanarm::posterior_epred(newdata = newdata,
                               re.form = NULL,
                               draws = draws)
@@ -45,7 +57,14 @@ posterior_preplot_bysubj <- function (object, newdata, pred_col = "y_pred", draw
 
 posterior_preplot_fixef <- function (object, newdata, pred_col = "y_pred", draws = 1000) {
   
+  preproc <- object %>% 
+    extract_recipe()
+  
+  newdata <- preproc %>% 
+    bake(new_data = newdata)
+  
   out <- object %>%
+    extract_fit_engine() %>% 
     rstanarm::posterior_epred(newdata = newdata,
                               re.form = NA,
                               draws = draws)
@@ -76,39 +95,47 @@ preplot_params_fact_by_pic <- posterior_preplot_params(model_fact_by_pic)
 
 preplot_params_fact_by_source <- posterior_preplot_params(model_fact_by_source)
 
-preplot_by_subj_fact_by_pic <- model_fact_by_pic$data %>% 
+newdata_preplot_by_subj <-model_fact_by_pic %>% 
+  extract_fit_engine() %>% 
+  pluck("data") %>% 
   as_tibble() %>% 
   select(subj_num, j_score) %>% 
   distinct() %>% 
-  expand(nesting(subj_num, j_score), from_encoding_late = 0, resp_pic = 0:1, interest = -5:5) %>% 
-  posterior_preplot_bysubj(object = model_fact_by_pic,
-                           newdata = .,
-                           pred_col = "acc_pred")
+  expand(nesting(subj_num, j_score), 
+         encoding_trial_num = 1, 
+         nesting(resp_pic = c(-50, 50),
+                 resp_source = c(-50, 50)), 
+         interest = seq(0, 100, 10),
+         already_knew = "none")
 
-preplot_by_subj_fact_by_source <- model_fact_by_source$data %>% 
-  as_tibble() %>% 
-  select(subj_num, j_score) %>% 
-  distinct() %>% 
-  expand(nesting(subj_num, j_score), from_encoding_late = 0, resp_source = 0:1, interest = -5:5) %>% 
-  posterior_preplot_bysubj(object = model_fact_by_source,
-                           newdata = .,
-                           pred_col = "acc_pred")
+preplot_by_subj_fact_by_pic <- posterior_preplot_bysubj(object = model_fact_by_pic,
+                                                        newdata = newdata_preplot_by_subj,
+                                                        pred_col = "acc_pred")
 
-preplot_fixef_fact_by_pic <- crossing(j_score = c(-2.5, 2.5),
-                                      from_encoding_late = 0,
-                                      interest = 0,
-                                      resp_pic = 0:1) %>% 
-  posterior_preplot_fixef(object = model_fact_by_pic,
-                          newdata = .,
-                          pred_col = "acc_pred")
+preplot_by_subj_fact_by_source <- posterior_preplot_bysubj(object = model_fact_by_source,
+                                                           newdata = newdata_preplot_by_subj,
+                                                           pred_col = "acc_pred")
 
-preplot_fixef_fact_by_source <- crossing(j_score = c(-2.5, 2.5),
-                                         from_encoding_late = 0,
-                                         interest = 0,
-                                         resp_source = 0:1) %>% 
-  posterior_preplot_fixef(object = model_fact_by_source,
-                          newdata = .,
-                          pred_col = "acc_pred")
+# Importante: now that preprocessing is done with a recipe,
+# create the newdata ON THE SCALE OF THE ORIGINAL/REAL DATA
+# and all the recoding and such will be handled by the recipe
+newdata_preplot_fixef <- crossing(j_score = c(0.5, 0.8),
+                                  encoding_trial_num = 1,
+                                  interest = 50,
+                                  nesting(resp_pic = c(-50, 50),
+                                          resp_source = c(-50, 50)),
+                                  # we have to feed in a valid subject ID
+                                  # but trust that we are generating the fixef
+                                  subj_num = "4295606",
+                                  already_knew = "none")
+
+preplot_fixef_fact_by_pic <- posterior_preplot_fixef(object = model_fact_by_pic,
+                                                     newdata = newdata_preplot_fixef,
+                                                     pred_col = "acc_pred")
+
+preplot_fixef_fact_by_source <- posterior_preplot_fixef(object = model_fact_by_source,
+                                                        newdata = newdata_preplot_fixef,
+                                                        pred_col = "acc_pred")
 
 save(preplot_params_fact_by_pic,
      preplot_params_fact_by_source,
