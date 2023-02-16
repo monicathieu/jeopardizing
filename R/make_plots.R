@@ -14,6 +14,11 @@ theme_slides <- theme_bw(base_size = 14,
   theme(legend.background = element_blank(),
         plot.background = element_blank())
 
+theme_slides_ppt <- theme_bw(base_size = 22,
+                             base_family = "Helvetica Neue") +
+  theme(legend.background = element_blank(),
+        plot.background = element_blank())
+
 # Specify this separately because plot annotations take their own font arg
 font_ms <- "Helvetica Neue"
 theme_ms <- theme_bw(base_size = 14,
@@ -104,7 +109,7 @@ plot_fact_by_expertise <- retrieval %>%
   geom_point(alpha = 0.5) +
   geom_smooth(method = "lm", color = "black") +
   labs(x = "Trivia expertise",
-       y = "% correct recall for novel facts") +
+       y = "P(recall) for novel facts") +
   this_theme
 
 plot_fact_by_expertise_alreadyknew <- retrieval %>% 
@@ -241,7 +246,7 @@ plot_fixef_fact_by_pic <- preplot_fixef_fact_by_pic %>%
          resp_pic = recode_factor(as.character(resp_pic),
                            `-0.5` = "incorrect",
                            `0.5` = "correct")) %>% 
-  ggplot(aes(x = factor(resp_pic), y = acc_pred, color = j_score)) +
+  ggplot(aes(x = factor(resp_pic), y = acc_pred, color = fct_rev(j_score))) +
   geom_line(aes(group = interaction(subj_num, j_score)),
             data = retrieval %>% 
               filter(already_knew == "none") %>% 
@@ -263,7 +268,7 @@ plot_fixef_fact_by_pic <- preplot_fixef_fact_by_pic %>%
   geom_line(aes(group = interaction(j_score, iteration)), alpha = 0.04, size = 0.5) +
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
   labs(x = "Forced-choice photo memory",
-       y = "Predicted fact recall",
+       y = "P(recall) for novel facts",
        color = "Expertise (median split)") +
   this_theme +
   theme(legend.position = 0:1,
@@ -276,7 +281,7 @@ plot_fixef_fact_by_source <- preplot_fixef_fact_by_source %>%
          resp_source = recode_factor(as.character(resp_source),
                                   `-0.5` = "incorrect",
                                   `0.5` = "correct")) %>% 
-  ggplot(aes(x = factor(resp_source), y = acc_pred, color = j_score)) +
+  ggplot(aes(x = factor(resp_source), y = acc_pred, color = fct_rev(j_score))) +
   geom_line(aes(group = interaction(subj_num, j_score)),
             data = retrieval %>% 
               filter(already_knew == "none") %>% 
@@ -298,7 +303,7 @@ plot_fixef_fact_by_source <- preplot_fixef_fact_by_source %>%
   geom_line(aes(group = interaction(j_score, iteration)), alpha = 0.03, size = 0.5) +
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
   labs(x = "Forced-choice museum memory",
-       y = "Predicted fact recall",
+       y = "P(recall) for novel facts",
        color = "Expertise (median split)") +
   this_theme +
   theme(legend.position = 0:1,
@@ -377,6 +382,27 @@ ggsave(here::here("ignore", "figs", "plot_slides_source_by_expertise.png"),
 #        width = 8,
 #        height = 4,
 #        units = "in")
+
+## save plot objects for CNS data blitz (specific shapes) ----
+
+ggsave(here::here("ignore", "figs", "plot_cns2023talk_fact_by_expertise.png"),
+       plot = plot_fact_by_expertise + theme_slides_ppt,
+       device = "png",
+       width = 5.71,
+       height = 6.85,
+       units = "in")
+
+ggsave(here::here("ignore", "figs", "plot_cns2023talk_fixef_fact_by_pic.png"),
+       plot = plot_fixef_fact_by_pic + 
+         scale_color_manual(values = c("upper half" = "#b580b6", "lower half" = "#2c2aa6")) +
+         labs(color = "Expertise") +
+         theme_slides_ppt + 
+         theme(legend.position = c(0, 1), 
+               legend.justification = c(0, 1)),
+       device = "png",
+       width = 5.71,
+       height = 6.85,
+       units = "in")
 
 ## bulk save plot objects for ms caption draft rmd ----
 
