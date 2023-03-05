@@ -73,6 +73,11 @@ glmer_spec <- logistic_reg() %>%
 control_spec <- control_parsnip(verbosity = 2L) %>% 
   control_workflow()
 
+workflow_fact_alone <- workflow() %>% 
+  add_recipe(base_recipe) %>% 
+  add_model(glmer_spec,
+            formula = acc_recall ~ j_score + from_encoding_late + interest + (1 | subj_num))
+
 workflow_fact_by_pic <- workflow() %>% 
   add_recipe(base_recipe) %>% 
   add_model(glmer_spec,
@@ -85,6 +90,10 @@ workflow_fact_by_source <- workflow() %>%
 
 ## fit models ----
 
+model_fact_alone <- fit(workflow_fact_alone,
+                        data = retrieval_modelsafe,
+                        control = control_spec)
+
 model_fact_by_pic <- fit(workflow_fact_by_pic,
     data = retrieval_modelsafe,
     control = control_spec)
@@ -95,7 +104,8 @@ model_fact_by_source <- fit(workflow_fact_by_source,
 
 ## save that shit out immediately ----
 
-save(model_fact_by_pic,
+save(model_fact_alone,
+     model_fact_by_pic,
      model_fact_by_source,
      file = here::here("ignore", "data", "models.rda"))
 

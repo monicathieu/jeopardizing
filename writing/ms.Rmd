@@ -9,8 +9,56 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 require(tidyverse)
 require(magrittr)
+require(rlang)
+load(here::here("ignore", "data", "preplots.rda")) # For the model params
 load(here::here("ignore", "data", "plots_ms.rda"))
+
+signif_digits <- 3L
 ```
+
+```{r setup-extra-stat-reports}
+summarize_report <- function (data, col, ..., stat_name = "", unit_name = "", digs = signif_digits) {
+  if (unit_name != "") unit_name %<>% paste0(" ", .)
+  glue_in = if_else(stat_name != "",
+                    "{stat_name} = {a}{unit_name}, 95% CI [{b}, {c}]",
+                    "{a}{unit_name}, 95% CI [{b}, {c}]")
+  
+  col_chr = as_name(enexpr(col))
+  group_cols = enexprs(...)
+  
+  data %<>%
+    select(iteration, !!!group_cols, starts_with(col_chr)) %>%
+    pivot_longer(cols = starts_with(col_chr),
+                 names_to = "metric_type",
+                 values_to = "value",
+                 names_prefix = glue::glue("{col_chr}_"))
+  
+  if (!is.null(group_cols)) {
+    data %<>% group_by(!!!group_cols, metric_type)
+  } else {
+    data %<>% group_by(metric_type)
+  }
+  data %<>%
+    summarize(avg = mean(value, na.rm = T),
+              q025 = quantile(value, .025, na.rm = T),
+              q975 = quantile(value, .975, na.rm = T)) %>% 
+    mutate(across(c("avg", "q025", "q975"),
+                  \(x) formatC(signif(x, digits = digs), digits = digs, format = "fg", flag = "#", mode = "double")),
+           txt_apa = pmap_chr(list(avg, q025, q975),
+                              \(a, b, c) {glue::glue(glue_in)}
+           ),
+           across(c("avg", "q025", "q975"), as.numeric))
+  
+  return (data)
+}
+
+coefs_fact_by_pic <- preplot_params_fact_by_pic %>%
+  summarize_report(col = estimate, term, stat_name = "beta")
+
+coefs_fact_by_source <- preplot_params_fact_by_source %>%
+  summarize_report(col = estimate, term, stat_name = "beta")
+```
+
 
 # Figures and captions
 
@@ -40,6 +88,8 @@ plot_coefs_fact_by_pic
 plot_fixef_fact_by_pic
 ```
 
+Interaction coefficient: `r coefs_fact_by_pic %>% filter(term == "resp_pic:j_score") %>% pull(txt_apa)`
+
 ```{r}
 plot_pic_by_expertise
 ```
@@ -54,6 +104,8 @@ plot_coefs_fact_by_source
 ```{r}
 plot_fixef_fact_by_source
 ```
+
+Interaction coefficient: `r coefs_fact_by_source %>% filter(term == "resp_source:j_score") %>% pull(txt_apa)`
 
 ```{r}
 plot_source_by_expertise
