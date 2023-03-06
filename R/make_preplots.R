@@ -91,6 +91,8 @@ posterior_preplot_fixef <- function (object, newdata, pred_col = "y_pred", draws
 
 ## make the preplot objects ----
 
+preplot_params_fact_alone <- posterior_preplot_params(model_fact_alone)
+
 preplot_params_fact_by_pic <- posterior_preplot_params(model_fact_by_pic)
 
 preplot_params_fact_by_source <- posterior_preplot_params(model_fact_by_source)
@@ -137,7 +139,8 @@ preplot_fixef_fact_by_source <- posterior_preplot_fixef(object = model_fact_by_s
                                                         newdata = newdata_preplot_fixef,
                                                         pred_col = "acc_pred")
 
-save(preplot_params_fact_by_pic,
+save(preplot_params_fact_alone,
+     preplot_params_fact_by_pic,
      preplot_params_fact_by_source,
      preplot_by_subj_fact_by_pic,
      preplot_by_subj_fact_by_source,

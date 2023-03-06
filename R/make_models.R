@@ -95,12 +95,12 @@ model_fact_alone <- fit(workflow_fact_alone,
                         control = control_spec)
 
 model_fact_by_pic <- fit(workflow_fact_by_pic,
-    data = retrieval_modelsafe,
-    control = control_spec)
+                         data = retrieval_modelsafe,
+                         control = control_spec)
 
 model_fact_by_source <- fit(workflow_fact_by_source,
-    data = retrieval_modelsafe,
-    control = control_spec)
+                            data = retrieval_modelsafe,
+                            control = control_spec)
 
 ## save that shit out immediately ----
 

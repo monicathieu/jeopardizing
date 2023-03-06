@@ -52,6 +52,9 @@ summarize_report <- function (data, col, ..., stat_name = "", unit_name = "", di
   return (data)
 }
 
+coefs_fact_alone <- preplot_params_fact_alone %>%
+  summarize_report(col = estimate, term, stat_name = "beta")
+
 coefs_fact_by_pic <- preplot_params_fact_by_pic %>%
   summarize_report(col = estimate, term, stat_name = "beta")
 
@@ -77,6 +80,8 @@ plot_expertise_hist
 ```{r}
 plot_fact_by_expertise
 ```
+
+Expertise score coefficient (from fancy multilevel model, takes into account diff number of trials per subject): `r coefs_fact_alone %>% filter(term == "j_score") %>% pull(txt_apa)`
 
 ## Figure 5
 

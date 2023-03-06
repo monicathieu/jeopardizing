@@ -7,6 +7,17 @@ source(here::here("R", "get_cleaned_data.R"))
 # For the model outputs
 load(here::here("ignore", "data", "preplots.rda"))
 
+# A function factory for getting integer y-axis values.
+# From https://joshuacook.netlify.app/post/integer-values-ggplot-axis/
+integer_breaks <- function(n = 5, ...) {
+  fxn <- function(x) {
+    breaks <- floor(pretty(x, n, ...))
+    names(breaks) <- attr(breaks, "labels")
+    breaks
+  }
+  return(fxn)
+}
+
 # Aileron family for slides
 # Something else...? for manuscript?
 theme_slides <- theme_bw(base_size = 14,
@@ -16,6 +27,11 @@ theme_slides <- theme_bw(base_size = 14,
 
 theme_slides_ppt <- theme_bw(base_size = 22,
                              base_family = "Helvetica Neue") +
+  theme(legend.background = element_blank(),
+        plot.background = element_blank())
+
+theme_poster <- theme_bw(base_size = 26,
+                         base_family = "Helvetica Neue") +
   theme(legend.background = element_blank(),
         plot.background = element_blank())
 
@@ -40,7 +56,7 @@ plot_demos <- q_google_demos %>%
             by = "gender") %>% 
   ggplot(aes(x = age, fill = gender_n)) +
   geom_histogram(position = "stack", alpha = 0.5, binwidth = 2) +
-  scale_y_continuous(breaks = scales::breaks_extended(6)) +
+  scale_y_continuous(breaks = integer_breaks()) +
   labs(y = "# of participants",
        fill = "gender") +
   this_theme +
@@ -402,6 +418,61 @@ ggsave(here::here("ignore", "figs", "plot_cns2023talk_fixef_fact_by_pic.png"),
        device = "png",
        width = 5.71,
        height = 6.85,
+       units = "in")
+
+## save plot objects for CNS poster (specific shapes) ----
+
+ggsave(here::here("ignore", "figs", "plot_cns2023poster_demos.png"),
+       plot = plot_demos + 
+         theme_poster + 
+         theme(legend.position = c(1, 1), 
+               legend.justification = c(1, 1),
+               legend.title = element_text(size = 20),
+               legend.text = element_text(size = 16)),
+       device = "png",
+       width = 7,
+       height = 5,
+       units = "in")
+
+# plot_fact_by_expertise but with a different constant color
+ggsave(here::here("ignore", "figs", "plot_cns2023poster_fact_by_expertise.png"),
+       plot = retrieval %>% 
+         filter(already_knew == "none") %>% 
+         group_by(subj_num, j_score) %>% 
+         summarize(acc_recall = mean(acc_recall)) %>% 
+         ggplot(aes(x = j_score, y = acc_recall)) +
+         geom_point(alpha = 0.5, color = "#4a71ea") +
+         geom_smooth(method = "lm", color = "black", fill = "#4a71ea") +
+         labs(x = "Trivia expertise",
+              y = "P(recall) for novel facts") +
+         theme_poster,
+       device = "png",
+       width = 8,
+       height = 6,
+       units = "in")
+
+ggsave(here::here("ignore", "figs", "plot_cns2023poster_fixef_fact_by_pic.png"),
+       plot = plot_fixef_fact_by_pic + 
+         scale_color_manual(values = c("upper half" = "#b580b6", "lower half" = "#2c2aa6")) +
+         labs(color = "Expertise") +
+         theme_poster + 
+         theme(legend.position = c(0, 1), 
+               legend.justification = c(0, 1)),
+       device = "png",
+       width = 8,
+       height = 6,
+       units = "in")
+
+ggsave(here::here("ignore", "figs", "plot_cns2023poster_fixef_fact_by_source.png"),
+       plot = plot_fixef_fact_by_source + 
+         scale_color_manual(values = c("upper half" = "#b580b6", "lower half" = "#2c2aa6")) +
+         labs(color = "Expertise") +
+         theme_poster + 
+         theme(legend.position = c(0, 1), 
+               legend.justification = c(0, 1)),
+       device = "png",
+       width = 8,
+       height = 6,
        units = "in")
 
 ## bulk save plot objects for ms caption draft rmd ----
