@@ -7,13 +7,24 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+require(targets)
 require(tidyverse)
 require(magrittr)
+require(cowplot)
 require(rlang)
-load(here::here("ignore", "data", "preplots.rda")) # For the model params
-load(here::here("ignore", "data", "plots_ms.rda"))
+# source(here::here("R", "get_cleaned_data.R"))
+# load(here::here("ignore", "data", "preplots.rda")) # For the model params
+# load(here::here("ignore", "data", "plots_ms.rda"))
 
+target_store <- here::here("ignore", "_targets")
 signif_digits <- 3L
+
+# Specify this separately because plot annotations take their own font arg
+font_ms <- "Helvetica Neue"
+theme_ms <- theme_bw(base_size = 14,
+                     base_family = font_ms) +
+  theme(legend.background = element_blank(),
+        plot.background = element_blank())
 ```
 
 ```{r setup-extra-stat-reports}
@@ -52,13 +63,13 @@ summarize_report <- function (data, col, ..., stat_name = "", unit_name = "", di
   return (data)
 }
 
-coefs_fact_alone <- preplot_params_fact_alone %>%
+coefs_fact_alone <- tar_read(preplot_params_fact_alone, store = target_store) %>%
   summarize_report(col = estimate, term, stat_name = "beta")
 
-coefs_fact_by_pic <- preplot_params_fact_by_pic %>%
+coefs_fact_by_pic <- tar_read(preplot_params_fact_by_pic, store = target_store) %>%
   summarize_report(col = estimate, term, stat_name = "beta")
 
-coefs_fact_by_source <- preplot_params_fact_by_source %>%
+coefs_fact_by_source <- tar_read(preplot_params_fact_by_source, store = target_store) %>%
   summarize_report(col = estimate, term, stat_name = "beta")
 ```
 
@@ -68,54 +79,108 @@ coefs_fact_by_source <- preplot_params_fact_by_source %>%
 ## Figure 3
 
 ```{r}
-plot_demos
+q_google_demos <- tar_read(q_google_demos, store = target_store)
+j_exp <- tar_read(expertise_summarized, store = target_store)
+plot_demos <- tar_read(plot_demos, store = target_store) +
+  theme_ms +
+  theme(legend.position = c(1, 1),
+          legend.justification = c(1, 1)) 
+plot_expertise_hist <- tar_read(plot_expertise_hist, store = target_store) +
+  theme_ms
 ```
 
-```{r}
-plot_expertise_hist
+```{r figure-3}
+plot_grid(plot_demos,
+          plot_expertise_hist,
+          labels = LETTERS[1:2], ncol = 1)
 ```
+
+**Figure 3.** Participant demographics. **(A)** `r nrow(q_google_demos)` total participants aged 18 and up enrolled in the study (M~age~ = `r mean(q_google_demos$age, na.rm = T) %>% signif(digits = 3)` yrs, SD~age~ = `r sd(q_google_demos$age, na.rm = T) %>% signif(digits = 3)`). Histogram bars are stacked by participant gender such that the total bar height reflects all participants in that age bin. **(B)** Participants ranged in pre-existing trivia expertise, as measured by their score out of 50 questions on a cued-recall general knowledge test. The median expertise score was `r median(j_exp$j_score) * 50`/50 questions correct.
 
 ## Figure 4
 
 ```{r}
-plot_fact_by_expertise
+plot_fact_by_expertise <- tar_read(plot_fact_by_expertise, store = target_store)
 ```
+
+```{r}
+plot_fact_by_expertise +
+  theme_ms
+```
+
+**Figure 4.** Memory for new facts as a function of trivia expertise. Each point represents one participant’s percent correct fact recall. Participants with higher trivia expertise showed greater recall accuracy for novel facts encoded during the museum encoding phase. Participants with higher trivia expertise were more likely to report already knowing "some" or "all" of the presented facts at encoding [REMINDER TO PUT THE ASSOCIATED NUMBERS IN THE MAIN TEXT], so this figure shows recall only for facts that were judged to be novel. All subsequent analyses were also restricted to trials reported as novel at encoding. A linear regression line with 95% CI is plotted with ggplot2’s `geom_smooth()` to illustrate that participants with greater expertise tended to show better fact memory.
 
 Expertise score coefficient (from fancy multilevel model, takes into account diff number of trials per subject): `r coefs_fact_alone %>% filter(term == "j_score") %>% pull(txt_apa)`
 
 ## Figure 5
 
 ```{r}
-plot_coefs_fact_by_pic
+plot_coefs_fact_by_pic <- tar_read(plot_coefs_fact_by_pic, store = target_store)
+plot_fixef_fact_by_pic <- tar_read(plot_fixef_fact_by_pic, store = target_store)
+plot_pic_by_expertise <- tar_read(plot_pic_by_expertise, store = target_store)
 ```
 
-```{r}
-plot_fixef_fact_by_pic
+```{r, fig.height = 4, fig.width = 12}
+plot_grid(plot_coefs_fact_by_pic + theme_ms,
+          plot_fixef_fact_by_pic + 
+            theme_ms +
+            theme(legend.position = 0:1,
+                  legend.justification = 0:1),
+          plot_pic_by_expertise + theme_ms,
+          nrow = 1,
+          labels = LETTERS[1:3])
+# Question from Chris at Alyssano CNS practice lab meeting March 10 2023: Were trivia experts more likely to report certain facts as novel? (like, ones that might be harder)
 ```
+
+**Figure 5.** Memory for associated images predicts memory for new facts in trivia experts. **(A)** Coefficient estimates for a Bayesian logistic regression predicting fact recall as a function of photo memory, trivia expertise, and other covariates. Values are shown for the median coefficient estimate along with the 80% (thick line) and 95% (thin line) posterior intervals. **(B)** Predicted across-participant fixed effects from the model. Each line represents the simple effect of photo memory on fact recall for participants in the upper or lower half of trivia expertise estimated on a particular iteration of the Bayesian regression (2 lines per iteration, 1 for each color/trivia expertise level). The spread and overlap of the color ribbons can thus be taken as a holistic representation of effect size of any differences in predicted fact recall. An interaction is visible in the coefficients **(A)** and predicted simple effects **(B)**, such that trialwise photo memory does not predict fact recall for participants in the lower half of trivia expertise, but successful photo memory predicts successful fact recall for participants in the upper half of trivia expertise. Raw data for individual participants are shown behind the fixed effects, with two points and one connecting line for each participant, reflecting their raw recall accuracy for facts presented with photos that were subsequently incorrectly vs. correctly identified. **(C)** Photo memory as a function of trivia expertise. Each point represents one participant’s percent correct photo choice. The chance line is shown at y = 0.5. A linear regression line with 95% CI is plotted with ggplot2’s `geom_smooth()` to illustrate that trivia expertise did not predict photo memory. 
+
 
 Interaction coefficient: `r coefs_fact_by_pic %>% filter(term == "resp_pic:j_score") %>% pull(txt_apa)`
-
-```{r}
-plot_pic_by_expertise
-```
-
 
 ## Figure 6
 
 ```{r}
-plot_coefs_fact_by_source
+plot_coefs_fact_by_source <- tar_read(plot_coefs_fact_by_source, store = target_store)
+plot_fixef_fact_by_source <- tar_read(plot_fixef_fact_by_source, store = target_store)
+plot_source_by_expertise <- tar_read(plot_source_by_expertise, store = target_store)
 ```
 
-```{r}
-plot_fixef_fact_by_source
+
+```{r, fig.height = 4, fig.width = 12}
+plot_grid(plot_coefs_fact_by_source + theme_ms,
+          plot_fixef_fact_by_source + 
+            theme_ms +
+            theme(legend.position = 0:1,
+                  legend.justification = 0:1),
+          plot_source_by_expertise + theme_ms,
+          nrow = 1,
+          labels = LETTERS[1:3])
 ```
+
+**Figure 6.** Memory for encoding source (i.e., museum identity) predicts memory for new facts. **(A)** Coefficient estimates for a Bayesian logistic regression predicting fact recall as a function of museum memory, trivia expertise, and other covariates. Values are shown for the median coefficient estimate along with the 80% (thick line) and 95% (thin line) posterior intervals. **(B)** Predicted across-participant fixed effects from the model. Each line represents the simple effect of museum memory on fact recall for participants in the upper or lower half of trivia expertise estimated on a particular iteration of the Bayesian regression (2 lines per iteration, 1 for each color/trivia expertise level). The spread and overlap of the color ribbons can thus be taken as a holistic representation of effect size of any differences in predicted fact recall. Two main effects are visible in the coefficients **(A)** and predicted simple effects **(B)**, such that trialwise museum memory predicts fact recall for participants irrespective of trivia expertise, and participants in the upper half of trivia expertise have greater fact recall irrespective of museum memory. Raw data for individual participants are shown behind the fixed effects, with two points and one connecting line for each participant, reflecting their raw recall accuracy for facts associated with museums that were subsequently incorrectly vs. correctly identified as the encoding source. **(C)** Museum memory as a function of trivia expertise. Each point represents one participant’s percent correct museum choice. The chance line is shown at y = 0.5. A linear regression line with 95% CI is plotted with ggplot2’s `geom_smooth()` to illustrate that participants with greater expertise tended to show better museum memory. 
 
 Interaction coefficient: `r coefs_fact_by_source %>% filter(term == "resp_source:j_score") %>% pull(txt_apa)`
 
+## Figure 7
+
+This may come to supplant both figures 5 and 6 if we move forward with this version of the analysis.
+
 ```{r}
-plot_source_by_expertise
+plot_coefs_fact_by_both <- tar_read(plot_coefs_fact_by_both, store = target_store)
+plot_fixef_fact_by_both <- tar_read(plot_fixef_fact_by_both, store = target_store)
 ```
 
+```{r, fig.height = 4, fig.width = 12}
+plot_grid(plot_coefs_fact_by_both + theme_ms,
+          plot_fixef_fact_by_both + 
+            theme_ms +
+            theme(legend.position = 0:1,
+                  legend.justification = 0:1),
+          nrow = 1,
+          labels = LETTERS[1:2])
+```
+
+**Figure 7.** Memory for associated episodic details interacts to predict memory for new facts. **(A)** Coefficient estimates for a Bayesian logistic regression predicting fact recall. Values are shown for the median coefficient estimate along with the 80% (thick line) and 95% (thin line) posterior intervals. **(B)** Predicted across-participant fixed effects from the model. Each line represents the simple effect of museum memory on fact recall for participants in the upper or lower half of trivia expertise estimated on a particular iteration of the Bayesian regression (2 lines per iteration, 1 for each color/trivia expertise level). The spread and overlap of the color ribbons can thus be taken as a holistic representation of effect size of any differences in predicted fact recall. Raw data for individual participants are shown behind the fixed effects, with two points and one connecting line for each participant, reflecting their raw recall accuracy for facts presented with photos that were subsequently incorrectly vs. correctly identified. The left and right panels split up trials with museums that were subsequently incorrectly vs. correctly identified as the encoding source. Two main effects are visible in the coefficients **(A)** and predicted simple effects **(B)**, such that trialwise museum memory predicts fact recall for participants irrespective of trivia expertise, and participants in the upper half of trivia expertise have greater fact recall irrespective of museum memory. A two-way interaction between photo and museum memory is visible, such that fact recall is higher when participants correctly recognized _both_ the associated photo and encoding museum. Finally, a three-way interaction is visible, such that that two-way interaction effect of joint photo and museum memory predicting fact recall is stronger for participants higher in trivia expertise.
 
 <!--
 # OLD STUFF I FOUND IN HERE: Intro
