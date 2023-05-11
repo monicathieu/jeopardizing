@@ -1,5 +1,4 @@
-require(tidyverse)
-require(magrittr)
+# No packages libraried because this now is only called by targets!
 
 get_typing_rts <- function (df) {
   out <- df %>% 
@@ -32,8 +31,9 @@ get_slider_rt <- function (df) {
   return (out)
 }
 
-read_gorilla_data <- function (paths, node_id) {
-  out <- paths[grepl(node_id, paths)] %>%
+# Always returns one mega-df
+read_gorilla_data <- function (paths) {
+  out <- paths %>%
     map(~read_lines(.)) %>%
     .[lengths(.) > 2] %>%
     map(~head(., n = -1)) %>%
@@ -42,4 +42,8 @@ read_gorilla_data <- function (paths, node_id) {
     map(~mutate(., across(any_of(c("randomise_blocks", "Timed Out")), as.integer))) %>%
     bind_rows()
   return (out)
+}
+
+filter_paths_grepl <- function (paths, pattern) {
+  paths[grepl(pattern, paths)]
 }
