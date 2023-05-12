@@ -15,7 +15,8 @@ tar_option_set(
                "rstanarm",
                "tidyverse",
                "magrittr",
-               "rlang"), # packages that your targets need to run
+               "rlang",
+               "cowplot"), # packages that your targets need to run
   format = "rds" # default storage format
   # Set other options as needed.
 )
@@ -326,6 +327,98 @@ target_ms_plots <- list(
   )
 )
 
+target_ms_figs <- list(
+  tar_target(name = fig_3,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig3.png")
+               figure <- plot_grid(plot_demos +
+                                     theme(legend.position = c(1, 1),
+                                           legend.justification = c(1, 1),
+                                           legend.background = element_blank()),
+                                   plot_expertise_hist,
+                                   labels = LETTERS[1:2],
+                                   ncol = 1)
+               save_plot(path,
+                         figure,
+                         ncol = 1,
+                         nrow = 2)
+               
+               path
+             },
+             format = "file"),
+  tar_target(name = fig_4,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig4.png")
+               figure <- plot_fact_by_expertise
+               save_plot(path,
+                         figure)
+               
+               path
+             },
+             format = "file"),
+  tar_target(name = fig_5,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig5.png")
+               figure <- plot_grid(plot_coefs_fact_by_pic,
+                                   plot_fixef_fact_by_pic + 
+                                     theme(legend.position = 0:1,
+                                           legend.justification = 0:1,
+                                           legend.background = element_blank()),
+                                   plot_pic_by_expertise,
+                                   nrow = 1,
+                                   rel_widths = c(1.5, 1, 1.5),
+                                   labels = LETTERS[1:3])
+               save_plot(path,
+                         figure,
+                         ncol = 3,
+                         nrow = 1,
+                         base_asp = 0.9)
+               
+               path
+             },
+             format = "file"),
+  tar_target(name = fig_6,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig6.png")
+               figure <- plot_grid(plot_coefs_fact_by_source,
+                                   plot_fixef_fact_by_source + 
+                                     theme(legend.position = 0:1,
+                                           legend.justification = 0:1,
+                                           legend.background = element_blank()),
+                                   plot_source_by_expertise,
+                                   nrow = 1,
+                                   rel_widths = c(1.5, 1, 1.5),
+                                   labels = LETTERS[1:3])
+               save_plot(path,
+                         figure,
+                         ncol = 3,
+                         nrow = 1,
+                         base_asp = 0.9)
+               
+               path
+             },
+             format = "file"),
+  tar_target(name = fig_7,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig7.png")
+               figure <- plot_grid(plot_coefs_fact_by_both,
+                                   plot_fixef_fact_by_both + 
+                                     theme(legend.position = 0:1,
+                                           legend.justification = 0:1,
+                                           legend.background = element_blank()),
+                                   nrow = 1,
+                                   labels = LETTERS[1:2])
+               save_plot(path,
+                         figure,
+                         ncol = 3,
+                         nrow = 1,
+                         base_asp = 1.618/2)
+               
+               path
+             },
+             format = "file")
+)
+
 ## Other shit we may as well track ----
 target_misc_qs <- list(
   tar_target(name = q_posttask_raw,
@@ -360,5 +453,5 @@ c(target_demos,
   target_models,
   target_preplots,
   target_ms_plots,
-  target_rmds)
+  target_ms_figs)
 
