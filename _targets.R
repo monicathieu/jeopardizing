@@ -228,7 +228,7 @@ target_preplots <- list(
              command = expertise_summarized %>%
                mutate(subj_num = fct_reorder(as.character(subj_num), j_score)) %>% 
                expand(nesting(subj_num, j_score), 
-                      encoding_trial_num = 1, 
+                      encoding_trial_num = 40.5, 
                       nesting(resp_pic = c(-50, 50),
                               resp_source = c(-50, 50)), 
                       interest = seq(0, 100, 10),
@@ -246,7 +246,7 @@ target_preplots <- list(
   ),
   tar_target(name = newdata_preplot_fixef,
              command = crossing(j_score = c(0.5, 0.8),
-                                encoding_trial_num = 1,
+                                encoding_trial_num = 40.5,
                                 interest = 50,
                                 resp_pic = c(-50, 50),
                                 resp_source = c(-50, 50),
