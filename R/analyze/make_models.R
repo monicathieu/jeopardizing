@@ -41,9 +41,16 @@ make_recipe <- function (retrieval_data_prepped) {
                     transform = \(x) ifelse(x > 0, 2, 1),
                     levels = c("incorrect", "correct"),
                     ordered = TRUE) %>% 
+    # So that there is a value that will get treated as the true middle
+    # Should never appear for the purposes of modeling
+    # But we need to be able to get a hypothetical middle trial for preplots
+    # with the effect code at 0
     step_num2factor(encoding_trial_num,
-                    transform = \(x) ifelse(x > 40, 2, 1),
-                    levels = c("early", "late"),
+                    transform = \(x) case_when(x >= 41 ~ 3,
+                                               x > 40 & x < 41 ~ 2,
+                                               x <= 40 ~ 1,
+                                               TRUE ~ NA_real_),
+                    levels = c("early", "mid", "late"),
                     ordered = TRUE) %>% 
     step_ordinalscore(c(resp_pic, resp_source, encoding_trial_num)) %>%
     # to get it to -0.5 and +0.5
