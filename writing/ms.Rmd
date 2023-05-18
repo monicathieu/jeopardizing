@@ -71,6 +71,9 @@ coefs_fact_by_pic <- tar_read(preplot_params_fact_by_pic, store = target_store) 
 
 coefs_fact_by_source <- tar_read(preplot_params_fact_by_source, store = target_store) %>%
   summarize_report(col = estimate, term, stat_name = "beta")
+
+coefs_fact_by_both <- tar_read(preplot_params_fact_by_both, store = target_store) %>%
+  summarize_report(col = estimate, term, stat_name = "beta")
 ```
 
 
@@ -164,6 +167,24 @@ Interaction coefficient: `r coefs_fact_by_source %>% filter(term == "resp_source
 ## Figure 7
 
 This may come to supplant both figures 5 and 6 if we move forward with this version of the analysis.
+
+```{r}
+preplot_fixef_fact_by_both <- tar_read(preplot_fixef_fact_by_both, store = target_store)
+
+preplot_fixef_fact_by_both %>% 
+  mutate(across(c(j_score, resp_pic, resp_source), \(x) if_else(x > 0, "high", "low")),
+         resp_pic = paste0("pic.", resp_pic),
+         resp_source = paste0("source.", resp_source)) %>% 
+  pivot_wider(names_from = c(resp_pic, resp_source),
+              values_from = acc_pred) %>% 
+  mutate(superdiff = (pic.high_source.high - pic.low_source.high) - (pic.high_source.low - pic.low_source.low)) %>% 
+  select(-starts_with("pic.")) %>% 
+  group_by(j_score) %>% 
+  summarize(avg = mean(superdiff, na.rm = T),
+            q025 = quantile(superdiff, .025, na.rm = T),
+            q500 = median(superdiff, na.rm = T),
+            q975 = quantile(superdiff, .975, na.rm = T))
+```
 
 ```{r}
 plot_coefs_fact_by_both <- tar_read(plot_coefs_fact_by_both, store = target_store)
