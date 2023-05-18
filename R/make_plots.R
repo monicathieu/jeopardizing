@@ -7,16 +7,7 @@ source(here::here("R", "get_cleaned_data.R"))
 # For the model outputs
 load(here::here("ignore", "data", "preplots.rda"))
 
-# A function factory for getting integer y-axis values.
-# From https://joshuacook.netlify.app/post/integer-values-ggplot-axis/
-integer_breaks <- function(n = 5, ...) {
-  fxn <- function(x) {
-    breaks <- floor(pretty(x, n, ...))
-    names(breaks) <- attr(breaks, "labels")
-    breaks
-  }
-  return(fxn)
-}
+
 
 # Aileron family for slides
 # Something else...? for manuscript?
@@ -30,15 +21,9 @@ theme_slides_ppt <- theme_bw(base_size = 22,
   theme(legend.background = element_blank(),
         plot.background = element_blank())
 
+font_poster <- "ITC Korinna Regular"
 theme_poster <- theme_bw(base_size = 26,
-                         base_family = "Helvetica Neue") +
-  theme(legend.background = element_blank(),
-        plot.background = element_blank())
-
-# Specify this separately because plot annotations take their own font arg
-font_ms <- "Helvetica Neue"
-theme_ms <- theme_bw(base_size = 14,
-                     base_family = font_ms) +
+                         base_family = font_poster) +
   theme(legend.background = element_blank(),
         plot.background = element_blank())
 
@@ -46,38 +31,9 @@ this_font <- font_ms
 this_theme <- theme_ms
 ## demographics ----
 
-plot_demos <- q_google_demos %>% 
-  mutate(gender = coalesce(gender, "not reported")) %>% 
-  left_join(q_google_demos %>%
-              count(gender) %>%
-              mutate(gender = coalesce(gender, "not reported"),
-                     gender_n = glue::glue("{gender} (n = {n})")) %>%
-              select(-n),
-            by = "gender") %>% 
-  ggplot(aes(x = age, fill = gender_n)) +
-  geom_histogram(position = "stack", alpha = 0.5, binwidth = 2) +
-  scale_y_continuous(breaks = integer_breaks()) +
-  labs(y = "# of participants",
-       fill = "gender") +
-  this_theme +
-  theme(legend.position = c(1, 1),
-        legend.justification = c(1, 1))
+
 
 ## trivia expertise ----
-
-plot_expertise_hist <- j_exp %>% 
-  ggplot(aes(x = j_score)) +
-  geom_histogram(binwidth = .05, fill = "gray80") +
-  geom_vline(xintercept = median(j_exp$j_score), linetype = "dotted") +
-  annotate("text",
-           x = median(j_exp$j_score) - 0.02,
-           y = 20,
-           label = "median score",
-           hjust = 1,
-           family = this_font) +
-  labs(x = "Expertise score (proportion correct out of 50 questions)",
-       y = "# of participants") +
-  this_theme
 
 plot_expertise_gender <- j_exp %>% 
   mutate(subj_num = factor(subj_num)) %>% 
@@ -117,17 +73,6 @@ plot_encoding_novel <- encoding %>%
 
 ## fact retrieval ----
 
-plot_fact_by_expertise <- retrieval %>% 
-  filter(already_knew == "none") %>% 
-  group_by(subj_num, j_score) %>% 
-  summarize(acc_recall = mean(acc_recall)) %>% 
-  ggplot(aes(x = j_score, y = acc_recall)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", color = "black") +
-  labs(x = "Trivia expertise",
-       y = "P(recall) for novel facts") +
-  this_theme
-
 plot_fact_by_expertise_alreadyknew <- retrieval %>% 
   filter(!is.na(already_knew)) %>% 
   group_by(subj_num, j_score, already_knew) %>% 
@@ -155,96 +100,12 @@ plot_fact_by_interest <- retrieval %>%
   this_theme
 
 ## photo retrieval ----
-
-plot_pic_by_expertise <- retrieval %>%
-  filter(already_knew == "none") %>% 
-  # binarized!
-  mutate(resp_pic = as.numeric(resp_pic > 0)) %>% 
-  group_by(subj_num, j_score) %>% 
-  summarize(resp_mean = mean(resp_pic)) %>% 
-  ggplot(aes(x = j_score, y = resp_mean)) +
-  geom_hline(yintercept = 0.5, linetype = "dotted") +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", color = "black") +
-  labs(x = "Trivia expertise", y = "Forced-choice photo memory") +
-  this_theme
   
 ## source retrieval ----
 
-plot_source_by_expertise <- retrieval %>%
-  filter(already_knew == "none") %>% 
-  # binarized!
-  mutate(resp_source = as.numeric(resp_source > 0)) %>% 
-  group_by(subj_num, j_score) %>% 
-  summarize(resp_mean = mean(resp_source)) %>% 
-  ggplot(aes(x = j_score, y = resp_mean)) +
-  geom_hline(yintercept = 0.5, linetype = "dotted") +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", color = "black") +
-  labs(x = "Trivia expertise", y = "Forced-choice museum memory") +
-  this_theme
+
 
 ## across retrieval tasks ----
-
-plot_coefs_fact_by_pic <- preplot_params_fact_by_pic %>% 
-  group_by(term) %>% 
-  summarize(q025 = quantile(estimate, .025),
-            q100 = quantile(estimate, .1),
-            q500 = median(estimate),
-            q900 = quantile(estimate, .9),
-            q975 = quantile(estimate, .975)) %>% 
-  mutate(term = fct_relevel(term,
-                            "intercept",
-                            "interest",
-                            "j_score",
-                            "from_encoding_late",
-                            "resp_pic",
-                            "resp_pic:j_score"),
-         term = fct_recode(term,
-                           "Intercept" = "intercept",
-                           "Interest at encoding" = "interest",
-                           "Trivia expertise" = "j_score",
-                           "Photo from second museum?" = "from_encoding_late",
-                           "Photo memory" = "resp_pic",
-                           "Expertise x photo memory" = "resp_pic:j_score")) %>% 
-  ggplot(aes(x = q500, y = fct_rev(term))) +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  geom_errorbarh(aes(xmin = q025, xmax = q975), height = 0, size = 1) +
-  geom_errorbarh(aes(xmin = q100, xmax = q900), height = 0, size = 2) +
-  geom_point(size = 3) +
-  labs(x = "Coefficient estimate",
-       y = NULL) +
-  this_theme
-
-plot_coefs_fact_by_source <- preplot_params_fact_by_source %>% 
-  group_by(term) %>% 
-  summarize(q025 = quantile(estimate, .025),
-            q100 = quantile(estimate, .1),
-            q500 = median(estimate),
-            q900 = quantile(estimate, .9),
-            q975 = quantile(estimate, .975)) %>% 
-  mutate(term = fct_relevel(term,
-                            "intercept",
-                            "interest",
-                            "j_score",
-                            "from_encoding_late",
-                            "resp_source",
-                            "resp_source:j_score"),
-         term = fct_recode(term,
-                           "Intercept" = "intercept",
-                           "Interest at encoding" = "interest",
-                           "Trivia expertise" = "j_score",
-                           "Fact from second museum?" = "from_encoding_late",
-                           "Museum memory" = "resp_source",
-                           "Expertise x museum memory" = "resp_source:j_score")) %>% 
-  ggplot(aes(x = q500, y = fct_rev(term))) +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  geom_errorbarh(aes(xmin = q025, xmax = q975), height = 0, size = 1) +
-  geom_errorbarh(aes(xmin = q100, xmax = q900), height = 0, size = 2) +
-  geom_point(size = 3) +
-  labs(x = "Coefficient estimate",
-       y = NULL) +
-  this_theme
 
 retrieval %>% 
   filter(already_knew == "none") %>% 
@@ -286,7 +147,6 @@ plot_fixef_fact_by_pic <- preplot_fixef_fact_by_pic %>%
   labs(x = "Forced-choice photo memory",
        y = "P(recall) for novel facts",
        color = "Expertise (median split)") +
-  this_theme +
   theme(legend.position = 0:1,
         legend.justification = 0:1)
 
@@ -321,7 +181,6 @@ plot_fixef_fact_by_source <- preplot_fixef_fact_by_source %>%
   labs(x = "Forced-choice museum memory",
        y = "P(recall) for novel facts",
        color = "Expertise (median split)") +
-  this_theme +
   theme(legend.position = 0:1,
         legend.justification = 0:1)
 
@@ -423,12 +282,20 @@ ggsave(here::here("ignore", "figs", "plot_cns2023talk_fixef_fact_by_pic.png"),
 ## save plot objects for CNS poster (specific shapes) ----
 
 ggsave(here::here("ignore", "figs", "plot_cns2023poster_demos.png"),
-       plot = plot_demos + 
-         theme_poster + 
-         theme(legend.position = c(1, 1), 
-               legend.justification = c(1, 1),
-               legend.title = element_text(size = 20),
-               legend.text = element_text(size = 16)),
+       plot = j_exp %>% 
+         ggplot(aes(x = j_score)) +
+         geom_histogram(binwidth = .05, fill = "#4a71ea", alpha = 0.8) +
+         geom_vline(xintercept = median(j_exp$j_score), linetype = "dotted") +
+         annotate("text",
+                  x = median(j_exp$j_score) - 0.02,
+                  y = 20,
+                  label = "median score",
+                  hjust = 1,
+                  family = this_font,
+                  size = 8) +
+         labs(x = "Trivia expertise\n(prop. correct out of 50 Qs)",
+              y = "# of participants") + 
+         theme_poster,
        device = "png",
        width = 7,
        height = 5,

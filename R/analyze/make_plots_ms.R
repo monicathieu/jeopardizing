@@ -92,7 +92,7 @@ make_plot_coefs_fact_by_pic <- function (preplot_params) {
                              "Intercept" = "intercept",
                              "Interest at encoding" = "interest",
                              "Trivia expertise" = "j_score",
-                             "Photo from second museum?" = "from_encoding_late",
+                             "First vs. second museum?" = "from_encoding_late",
                              "Photo memory" = "resp_pic",
                              "Expertise x photo memory" = "resp_pic:j_score")) %>% 
     make_plot_coefs()
@@ -112,7 +112,7 @@ make_plot_coefs_fact_by_source <- function (preplot_params) {
                              "Intercept" = "intercept",
                              "Interest at encoding" = "interest",
                              "Trivia expertise" = "j_score",
-                             "Fact from second museum?" = "from_encoding_late",
+                             "First vs. second museum?" = "from_encoding_late",
                              "Museum memory" = "resp_source",
                              "Expertise x museum memory" = "resp_source:j_score")) %>% 
     make_plot_coefs()
@@ -136,7 +136,7 @@ make_plot_coefs_fact_by_both <- function (preplot_params) {
                              "Intercept" = "intercept",
                              "Interest at encoding" = "interest",
                              "Trivia expertise" = "j_score",
-                             "Fact from second museum?" = "from_encoding_late",
+                             "First vs. second museum?" = "from_encoding_late",
                              "Photo memory" = "resp_pic",
                              "Museum memory" = "resp_source",
                              "Expertise x photo memory" = "resp_pic:j_score",
@@ -186,32 +186,30 @@ make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data) {
   retrieval_summarized <- retrieval_data %>% 
     filter(already_knew == "none") %>% 
     mutate(acc_recall = as.numeric(acc_recall > 0),
-           resp_pic = if_else(resp_pic > 0, "correct", "incorrect"),
-           resp_source = if_else(resp_source > 0, "correct museum", "incorrect museum"),
-           j_score = if_else(j_score > 0.7, "upper half", "lower half")) %>% 
+           across(c(resp_pic, resp_source), \(x) if_else(x > 0, "correct", "incorrect")),
+           j_score = if_else(j_score > 0.7, "upper half of expertise", "lower half of expertise")) %>% 
     group_by(subj_num, j_score, resp_pic, resp_source) %>% 
     summarize(acc_pred = mean(acc_recall))
   
   preplot_fixef %>% 
     mutate(j_score = recode_factor(as.character(j_score),
-                                   `1` = "upper half",
-                                   `-2` = "lower half"),
+                                   `1` = "upper half of expertise",
+                                   `-2` = "lower half of expertise"),
            across(c(resp_pic, resp_source),
                   \(x) recode_factor(as.character(x),
                                      `-0.5` = "incorrect",
-                                     `0.5` = "correct")),
-           resp_source = paste0(resp_source, " museum")) %>% 
-    ggplot(aes(x = fct_rev(resp_pic), y = acc_pred, color = fct_rev(j_score))) +
-    geom_line(aes(group = interaction(subj_num, j_score)),
+                                     `0.5` = "correct"))) %>% 
+    ggplot(aes(x = fct_rev(resp_pic), y = acc_pred, color = fct_rev(resp_source))) +
+    geom_line(aes(group = interaction(subj_num, resp_source)),
               data = retrieval_summarized,
               alpha = 0.2) +
     geom_jitter(data = retrieval_summarized,
                 alpha = 0.5,
                 width = 0.05) +
-    geom_line(aes(group = interaction(j_score, iteration)), alpha = 0.04, size = 0.5) +
-    facet_grid(~ fct_rev(resp_source)) +
+    geom_line(aes(group = interaction(resp_source, iteration)), alpha = 0.04, size = 0.5) +
+    facet_grid(~ fct_rev(j_score)) +
     guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
     labs(x = "Forced-choice photo memory",
          y = "P(recall) for novel facts",
-         color = "Expertise (median split)")
+         color = "Forced-choice museum memory")
 }
