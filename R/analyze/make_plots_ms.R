@@ -69,11 +69,14 @@ summarize_params <- function (preplot_params) {
 
 make_plot_coefs <- function (preplot_params) {
   preplot_params %>% 
-    ggplot(aes(x = q500, y = fct_rev(term))) +
+    mutate(clears = if_else(sign(q025) == sign(q975), "yes", "no")) %>% 
+    ggplot(aes(x = q500, y = fct_rev(term), color = clears)) +
     geom_vline(xintercept = 0, linetype = "dotted") +
     geom_errorbarh(aes(xmin = q025, xmax = q975), height = 0, size = 1) +
     geom_errorbarh(aes(xmin = q100, xmax = q900), height = 0, size = 2) +
     geom_point(size = 3) +
+    scale_color_manual(values = c("no" = "black", "yes" = "springgreen3")) +
+    guides(color = "none") +
     labs(x = "Coefficient estimate",
          y = NULL)
 }
@@ -92,7 +95,7 @@ make_plot_coefs_fact_by_pic <- function (preplot_params) {
                              "Intercept" = "intercept",
                              "Interest at encoding" = "interest",
                              "Trivia expertise" = "j_score",
-                             "First vs. second museum?" = "from_encoding_late",
+                             "First vs. second museum" = "from_encoding_late",
                              "Photo memory" = "resp_pic",
                              "Expertise x photo memory" = "resp_pic:j_score")) %>% 
     make_plot_coefs()
@@ -112,7 +115,7 @@ make_plot_coefs_fact_by_source <- function (preplot_params) {
                              "Intercept" = "intercept",
                              "Interest at encoding" = "interest",
                              "Trivia expertise" = "j_score",
-                             "First vs. second museum?" = "from_encoding_late",
+                             "First vs. second museum" = "from_encoding_late",
                              "Museum memory" = "resp_source",
                              "Expertise x museum memory" = "resp_source:j_score")) %>% 
     make_plot_coefs()
@@ -136,7 +139,7 @@ make_plot_coefs_fact_by_both <- function (preplot_params) {
                              "Intercept" = "intercept",
                              "Interest at encoding" = "interest",
                              "Trivia expertise" = "j_score",
-                             "First vs. second museum?" = "from_encoding_late",
+                             "First vs. second museum" = "from_encoding_late",
                              "Photo memory" = "resp_pic",
                              "Museum memory" = "resp_source",
                              "Expertise x photo memory" = "resp_pic:j_score",
