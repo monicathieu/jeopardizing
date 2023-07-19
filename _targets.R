@@ -204,6 +204,14 @@ target_models <- list(
   tar_target(name = model_fact_by_both,
              command = fit_retrieval_model(in_data = retrieval,
                                            in_formula = acc_recall ~ resp_pic * resp_source * j_score + from_encoding_late + interest + (1 | subj_num))
+  ),
+  tar_target(name = model_pic,
+             command = fit_retrieval_model(in_data = retrieval,
+                                           in_formula = resp_pic ~ j_score + from_encoding_late + interest + (1 | subj_num))
+  ),
+  tar_target(name = model_source,
+             command = fit_retrieval_model(in_data = retrieval,
+                                           in_formula = resp_source ~ j_score + from_encoding_late + interest + (1 | subj_num))
   )
 )
 
@@ -220,6 +228,12 @@ target_preplots <- list(
              ),
   tar_target(name = preplot_params_fact_by_both,
              command = posterior_preplot_params(model_fact_by_both)
+  ),
+  tar_target(name = preplot_params_pic,
+             command = posterior_preplot_params(model_pic)
+  ),
+  tar_target(name = preplot_params_source,
+             command = posterior_preplot_params(model_source)
   ),
   # Importante: now that preprocessing is done with a recipe,
   # create the newdata ON THE SCALE OF THE ORIGINAL/REAL DATA
@@ -433,7 +447,7 @@ target_misc_qs <- list(
              command = filter_paths_grepl(paths_raw_data, "questionnaire-d6y6"),
              format = "file"),
   tar_target(name = q_trivia_demos,
-             command = q_posttask_raw %>% 
+             command = q_trivia_demos_raw %>% 
                read_gorilla_data() %>% 
                clean_q_trivia_demos() %>% 
                bind_expertise_scores(expertise_scores = expertise_summarized)

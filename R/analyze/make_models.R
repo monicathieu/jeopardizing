@@ -74,6 +74,18 @@ fit_retrieval_model <- function (in_data, in_formula) {
   base_recipe <- in_data %>% 
     make_recipe()
   
+  # If it's one of the supplementary models, change the recipe roles to add the relevant column as a predictor
+  if (as_name(f_lhs(in_formula)) != "acc_recall") {
+    base_recipe %<>%
+      update_role(!!f_lhs(in_formula), new_role = "outcome") %>% 
+      # yes, redoing an old step to turn the outcome var back to factor
+      # because resp_pic and resp_source come in effect-coded numerically
+      step_num2factor(!!f_lhs(in_formula),
+                      transform = \(x) ifelse(x > 0, 2, 1),
+                      levels = c("incorrect", "correct"),
+                      ordered = TRUE)
+  }
+  
   glmer_spec <- logistic_reg() %>% 
     set_engine("stan_glmer",
                prior = rstanarm::cauchy(0, 2.5),
