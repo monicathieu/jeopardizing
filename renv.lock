@@ -787,6 +787,17 @@
         "globals"
       ]
     },
+    "future.callr": {
+      "Package": "future.callr",
+      "Version": "0.8.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e76426c4a99a1798a9376c6fe9070a68",
+      "Requirements": [
+        "callr",
+        "future"
+      ]
+    },
     "gargle": {
       "Package": "gargle",
       "Version": "1.2.0",
@@ -2124,6 +2135,27 @@
         "shiny"
       ]
     },
+    "showtext": {
+      "Package": "showtext",
+      "Version": "0.9-6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "c0fd332d248b195bbcb94a0dfda37b0d",
+      "Requirements": [
+        "showtextdb",
+        "sysfonts"
+      ]
+    },
+    "showtextdb": {
+      "Package": "showtextdb",
+      "Version": "3.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "c12e756cf947e58b0f2c2a520521a5a8",
+      "Requirements": [
+        "sysfonts"
+      ]
+    },
     "slider": {
       "Package": "slider",
       "Version": "0.3.0",
@@ -2182,6 +2214,35 @@
       "Repository": "CRAN",
       "Hash": "b227d13e29222b4574486cfcbde077fa",
       "Requirements": []
+    },
+    "sysfonts": {
+      "Package": "sysfonts",
+      "Version": "0.8.8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "7f4dac41a3e348ae12832167e6beb875",
+      "Requirements": []
+    },
+    "tarchetypes": {
+      "Package": "tarchetypes",
+      "Version": "0.7.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "571f204a0ad0352cb96dc53b602e56e4",
+      "Requirements": [
+        "digest",
+        "dplyr",
+        "fs",
+        "furrr",
+        "future",
+        "future.callr",
+        "rlang",
+        "targets",
+        "tibble",
+        "tidyselect",
+        "vctrs",
+        "withr"
+      ]
     },
     "targets": {
       "Package": "targets",
