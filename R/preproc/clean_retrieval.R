@@ -162,7 +162,8 @@ bind_retrieval <- function (fact_data_scored, pic_data_clean, source_data_clean,
                                             TRUE ~ NA_character_),
            encoding_trial_num = if_else(group == "academic",
                                         group_trial_num * 2 - 1,
-                                        group_trial_num * 2))
+                                        group_trial_num * 2)) %>% 
+    ungroup()
   
   return (out)
 }
