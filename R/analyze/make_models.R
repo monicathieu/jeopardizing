@@ -65,7 +65,7 @@ make_retrieval_recipe <- function (retrieval_data_prepped) {
   return (out)
 }
 
-make_encoding_recipe <- function (retrieval_data_prepped) {
+make_interest_recipe <- function (retrieval_data_prepped) {
   out <- recipe(retrieval_data_prepped) %>% 
     step_filter(already_knew == "none") %>% 
     update_role(interest, new_role = "outcome") %>% 
@@ -88,9 +88,26 @@ make_encoding_recipe <- function (retrieval_data_prepped) {
     # to get it to -0.5 and +0.5
     # have to use step_range because ordinalscore requires int output
     step_range(encoding_trial_num, min = -0.5, max = 0.5) %>% 
-    # re-centering but NOT scaling because I want it to predict in single interest points
-    step_range(interest, min = -50, max = 50) %>% 
+    # re-centering but and scaling because it might behave better at smaller range
+    step_range(interest, min = -5, max = 5) %>% 
     # scaling these to range of 10 makes it so unit change is 10% of the full range
+    # the actual lowest j_score is .26 so this gets it to the same range where a score of 0 would range down to -7
+    step_range(j_score, min = -4.4, max = 3) %>%  # %>% 
+    step_rename(from_encoding_late = encoding_trial_num)
+  
+  return (out)
+}
+
+make_alreadyknew_recipe <- function (retrieval_data_prepped) {
+  out <- recipe(retrieval_data_prepped) %>% 
+    update_role(already_knew, new_role = "outcome") %>% 
+    update_role(c(j_score, subj_num), new_role = "predictor") %>% 
+    # so I don't have to put already_knew into the preplot new data
+    update_role_requirements(role = "NA", bake = FALSE) %>% 
+    # to specifically combine "all" into "some"
+    # bc step_other collapses by number, not specific levels
+    step_mutate(already_knew = fct_recode(already_knew, "some" = "all")) %>% 
+    # scaling to range of 10 makes it so unit change is 10% of the full range
     # the actual lowest j_score is .26 so this gets it to the same range where a score of 0 would range down to -7
     step_range(j_score, min = -4.4, max = 3) %>%  # %>% 
     step_rename(from_encoding_late = encoding_trial_num)
@@ -135,7 +152,7 @@ fit_encoding_model <- function (in_data, in_formula) {
     prep_retrieval_data()
   
   base_recipe <- in_data %>% 
-    make_encoding_recipe()
+    make_interest_recipe()
   
   # do a linear reg because  interest ranges from 0-100 (or -50 - 50), good enough
   glmer_spec <- linear_reg() %>% 
@@ -143,6 +160,23 @@ fit_encoding_model <- function (in_data, in_formula) {
                prior = rstanarm::normal(0, 2.5, autoscale = TRUE),
                prior_intercept = rstanarm::normal(0, 2.5, autoscale = TRUE),
                iter = 3000)
+  
+  out <- fit_general_model(in_data, base_recipe, glmer_spec, in_formula)
+  
+  return (out)
+}
+
+fit_alreadyknew_model <- function (in_data, in_formula) {
+  in_data %<>%
+    prep_retrieval_data()
+  
+  base_recipe <- in_data %>% 
+    make_alreadyknew_recipe()
+  
+  glmer_spec <- logistic_reg() %>% 
+    set_engine("stan_glmer",
+               prior = rstanarm::cauchy(0, 2.5),
+               prior_intercept = rstanarm::cauchy(0, 2.5))
   
   out <- fit_general_model(in_data, base_recipe, glmer_spec, in_formula)
   
