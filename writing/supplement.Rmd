@@ -1,6 +1,6 @@
 ---
-title: "J-Study manuscript"
-author: "Monica Thieu"
+title: "J-Study supplement"
+author: "Monica Thieu, Lauren Wilkins, & Mariam Aly"
 date: "Updated `r Sys.Date()`"
 output: html_document
 ---
@@ -11,15 +11,10 @@ require(targets)
 require(tidyverse)
 require(magrittr)
 require(rlang)
-# source(here::here("R", "get_cleaned_data.R"))
-# load(here::here("ignore", "data", "preplots.rda")) # For the model params
-# load(here::here("ignore", "data", "plots_ms.rda"))
 
 target_store <- here::here("ignore", "_targets")
 signif_digits <- 3L
-```
 
-```{r setup-extra-stat-reports}
 summarize_kable <- function (data,
                                col,
                                digs = signif_digits,
@@ -32,44 +27,15 @@ summarize_kable <- function (data,
 }
 ```
 
-
-# Figures and captions
-
-## Figure 3
-
-```{r}
-q_google_demos <- tar_read(q_google_demos, store = target_store)
-j_exp <- tar_read(expertise_summarized, store = target_store)
-plot_demos <- tar_read(plot_demos, store = target_store) +
-  theme_ms +
-  theme(legend.position = c(1, 1),
-          legend.justification = c(1, 1)) 
-plot_expertise_hist <- tar_read(plot_expertise_hist, store = target_store) +
-  theme_ms
-```
-
-```{r figure-3}
-knitr::include_graphics(here::here("ignore", "figs", "ms_fig3.png"))
-```
-
-## Figure 4
-
-```{r}
-knitr::include_graphics(here::here("ignore", "figs", "ms_fig4.png"))
-```
-
-## Figure 5
-
-```{r}
-knitr::include_graphics(here::here("ignore", "figs", "ms_fig5.png"))
-# Question from Chris at Alyssano CNS practice lab meeting March 10 2023: Were trivia experts more likely to report certain facts as novel? (like, ones that might be harder)
-```
-
 # Stats to copy and paste
 
 Or to inject if I can figure out a better way that preserves the Google-Docsery...
 
 ## Demographics
+
+```{r}
+q_google_demos <- tar_read(q_google_demos, store = target_store)
+```
 
 Number of participants: `r nrow(q_google_demos)`
 
@@ -105,6 +71,8 @@ encoding %>%
 Expertise score:
 
 ```{r}
+j_exp <- tar_read(expertise_summarized, store = target_store)
+
 j_exp %>% 
   # to get it in units of questions
   mutate(j_score = j_score * 50) %>% 
@@ -212,7 +180,7 @@ preplot_params_fact_by_both %>%
 ```
 
 ```{r}
-preplot_fixef_fact_by_both %>% 
+tar_read(preplot_fixef_fact_by_both, store = target_store) %>% 
   group_by(j_score, resp_pic, resp_source) %>% 
   summarize_kable(acc_pred,
                   fn_list = list(median = median))
