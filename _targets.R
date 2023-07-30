@@ -17,8 +17,9 @@ tar_option_set(
                "magrittr",
                "rlang",
                "cowplot"), # packages that your targets need to run
-  format = "rds" # default storage format
+  format = "rds", # default storage format
   # Set other options as needed.
+  seed = 4L
 )
 
 # tar_make_clustermq() configuration (okay to leave alone):
@@ -34,6 +35,12 @@ tar_source(c("R/preproc/",
              "R/analyze/"))
 
 paths_raw_data <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T)
+
+# For the figure fonts
+library(showtext)
+# showtext_auto()
+# figure_font <- "Montserrat"
+# font_add_google(figure_font)
 # source("other_functions.R") # Source other scripts as needed. # nolint
 
 ## targets for demographics and subject IDs ----
@@ -193,17 +200,9 @@ target_models <- list(
              command = fit_retrieval_model(in_data = retrieval,
                                            in_formula = acc_recall ~ j_score + from_encoding_late + interest + (1 | subj_num))
              ),
-  tar_target(name = model_fact_by_pic,
-             command = fit_retrieval_model(in_data = retrieval,
-                                           acc_recall ~ resp_pic * j_score + from_encoding_late + interest + (1 | subj_num))
-  ),
-  tar_target(name = model_fact_by_source,
-             command = fit_retrieval_model(in_data = retrieval,
-                                           in_formula = acc_recall ~ resp_source * j_score + from_encoding_late + interest + (1 | subj_num))
-  ),
   tar_target(name = model_fact_by_both,
              command = fit_retrieval_model(in_data = retrieval,
-                                           in_formula = acc_recall ~ resp_pic * resp_source * j_score + from_encoding_late + interest + (1 | subj_num))
+                                   in_formula = acc_recall ~ resp_pic * resp_source * j_score + from_encoding_late + interest + (1 | subj_num))
   ),
   tar_target(name = model_pic,
              command = fit_retrieval_model(in_data = retrieval,
@@ -212,19 +211,17 @@ target_models <- list(
   tar_target(name = model_source,
              command = fit_retrieval_model(in_data = retrieval,
                                            in_formula = resp_source ~ j_score + from_encoding_late + interest + (1 | subj_num))
-  )
+  ),
+  tar_target(name = model_interest,
+             command = fit_encoding_model(in_data = retrieval,
+                                           in_formula = interest ~ j_score + from_encoding_late + (1 | subj_num))
+             )
 )
 
 ## targets for post-model PRE-PLOT objects ----
 target_preplots <- list(
   tar_target(name = preplot_params_fact_alone,
              command = posterior_preplot_params(model_fact_alone)
-             ),
-  tar_target(name = preplot_params_fact_by_pic,
-             command = posterior_preplot_params(model_fact_by_pic)
-             ),
-  tar_target(name = preplot_params_fact_by_source,
-             command = posterior_preplot_params(model_fact_by_source)
              ),
   tar_target(name = preplot_params_fact_by_both,
              command = posterior_preplot_params(model_fact_by_both)
@@ -248,16 +245,6 @@ target_preplots <- list(
                       interest = seq(0, 100, 10),
                       already_knew = "none")
   ),
-  tar_target(name = preplot_by_subj_fact_by_pic,
-             command = posterior_preplot_bysubj(object = model_fact_by_pic,
-                                                newdata = newdata_preplot_by_subj,
-                                                pred_col = "acc_pred")
-  ),
-  tar_target(name = preplot_by_subj_fact_by_source,
-             command = posterior_preplot_bysubj(object = model_fact_by_source,
-                                                newdata = newdata_preplot_by_subj,
-                                                pred_col = "acc_pred")
-  ),
   tar_target(name = newdata_preplot_fixef,
              command = crossing(j_score = c(0.5, 0.8),
                                 encoding_trial_num = 40.5,
@@ -269,19 +256,6 @@ target_preplots <- list(
                                 subj_num = "4295606",
                                 already_knew = "none")
              ),
-  tar_target(name = preplot_fixef_fact_by_pic,
-             command = posterior_preplot_fixef(object = model_fact_by_pic,
-                                               newdata = newdata_preplot_fixef %>% 
-                                                 filter(resp_pic == resp_source),
-                                               pred_col = "acc_pred")
-             
-  ),
-  tar_target(name = preplot_fixef_fact_by_source,
-             command = posterior_preplot_fixef(object = model_fact_by_source,
-                                               newdata = newdata_preplot_fixef %>% 
-                                                 filter(resp_pic == resp_source),
-                                               pred_col = "acc_pred")
-  ),
   tar_target(name = preplot_fixef_fact_by_both,
              command = posterior_preplot_fixef(object = model_fact_by_both,
                                                newdata = newdata_preplot_fixef,
@@ -314,30 +288,13 @@ target_ms_plots <- list(
                make_plot_retrieval_by_expertise(resp_col = resp_source,
                                                 y_label = "Forced-choice museum memory")
   ),
-  tar_target(name = plot_coefs_fact_by_pic,
-             command = make_plot_coefs_fact_by_pic(preplot_params_fact_by_pic)
-  ),
-  tar_target(name = plot_coefs_fact_by_source,
-             command = make_plot_coefs_fact_by_source(preplot_params_fact_by_source)
-  ),
   tar_target(name = plot_coefs_fact_by_both,
-             command = make_plot_coefs_fact_by_both(preplot_params_fact_by_both)
-  ),
-  tar_target(name = plot_fixef_fact_by_pic,
-             command = make_plot_fixef_fact_by_other(preplot_fixef_fact_by_pic,
-                                                     retrieval_data = retrieval,
-                                                     resp_col = resp_pic,
-                                                     x_label = "Forced-choice photo memory")
-  ),
-  tar_target(name = plot_fixef_fact_by_source,
-             command = make_plot_fixef_fact_by_other(preplot_fixef_fact_by_source,
-                                                     retrieval_data = retrieval,
-                                                     resp_col = resp_source,
-                                                     x_label = "Forced-choice museum memory")
+             command = preplot_params_fact_by_both %>% 
+               make_plot_coefs_fact_by_both()
   ),
   tar_target(name = plot_fixef_fact_by_both,
-             command = make_plot_fixef_fact_by_both(preplot_fixef_fact_by_both,
-                                                    retrieval_data = retrieval)
+             command = preplot_fixef_fact_by_both %>% 
+               make_plot_fixef_fact_by_both(retrieval_data = retrieval)
   )
 )
 
@@ -350,7 +307,7 @@ target_ms_figs <- list(
                                            legend.justification = c(1, 1),
                                            legend.background = element_blank()),
                                    plot_expertise_hist,
-                                   labels = LETTERS[1:2],
+                                   labels = letters[1:2],
                                    ncol = 1)
                save_plot(path,
                          figure,
@@ -373,55 +330,13 @@ target_ms_figs <- list(
   tar_target(name = fig_5,
              command = {
                path <- here::here("ignore", "figs", "ms_fig5.png")
-               figure <- plot_grid(plot_coefs_fact_by_pic,
-                                   plot_fixef_fact_by_pic + 
-                                     theme(legend.position = 0:1,
-                                           legend.justification = 0:1,
-                                           legend.background = element_blank()),
-                                   plot_pic_by_expertise,
-                                   nrow = 1,
-                                   rel_widths = c(1.5, 1, 1.5),
-                                   labels = LETTERS[1:3])
-               save_plot(path,
-                         figure,
-                         ncol = 3,
-                         nrow = 1,
-                         base_asp = 0.9)
-               
-               path
-             },
-             format = "file"),
-  tar_target(name = fig_6,
-             command = {
-               path <- here::here("ignore", "figs", "ms_fig6.png")
-               figure <- plot_grid(plot_coefs_fact_by_source,
-                                   plot_fixef_fact_by_source + 
-                                     theme(legend.position = 0:1,
-                                           legend.justification = 0:1,
-                                           legend.background = element_blank()),
-                                   plot_source_by_expertise,
-                                   nrow = 1,
-                                   rel_widths = c(1.5, 1, 1.5),
-                                   labels = LETTERS[1:3])
-               save_plot(path,
-                         figure,
-                         ncol = 3,
-                         nrow = 1,
-                         base_asp = 0.9)
-               
-               path
-             },
-             format = "file"),
-  tar_target(name = fig_7,
-             command = {
-               path <- here::here("ignore", "figs", "ms_fig7.png")
                figure <- plot_grid(plot_coefs_fact_by_both,
                                    plot_fixef_fact_by_both + 
-                                     theme(legend.position = 0:1,
-                                           legend.justification = 0:1,
+                                     theme(legend.position = c(0, 1),
+                                           legend.justification = c(0, 1),
                                            legend.background = element_blank()),
                                    nrow = 1,
-                                   labels = LETTERS[1:2])
+                                   labels = letters[1:2])
                save_plot(path,
                          figure,
                          ncol = 3,

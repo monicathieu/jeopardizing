@@ -17,7 +17,7 @@ prep_retrieval_data <- function (retrieval_data) {
   return (out)
 }
 
-make_recipe <- function (retrieval_data_prepped) {
+make_retrieval_recipe <- function (retrieval_data_prepped) {
   out <- recipe(retrieval_data_prepped) %>% 
     step_filter(already_knew == "none") %>% 
     update_role(acc_recall, new_role = "outcome") %>% 
@@ -65,6 +65,39 @@ make_recipe <- function (retrieval_data_prepped) {
   return (out)
 }
 
+make_encoding_recipe <- function (retrieval_data_prepped) {
+  out <- recipe(retrieval_data_prepped) %>% 
+    step_filter(already_knew == "none") %>% 
+    update_role(interest, new_role = "outcome") %>% 
+    update_role(c(j_score, encoding_trial_num, subj_num), new_role = "predictor") %>% 
+    # so I don't have to put already_knew into the preplot new data
+    update_role_requirements(role = "NA", bake = FALSE) %>% 
+    # update_role(subj_num, new_role = "ID") %>% 
+    # So that there is a value that will get treated as the true middle
+    # Should never appear for the purposes of modeling
+    # But we need to be able to get a hypothetical middle trial for preplots
+    # with the effect code at 0
+    step_num2factor(encoding_trial_num,
+                    transform = \(x) case_when(x >= 41 ~ 3,
+                                               x > 40 & x < 41 ~ 2,
+                                               x <= 40 ~ 1,
+                                               TRUE ~ NA_real_),
+                    levels = c("early", "mid", "late"),
+                    ordered = TRUE) %>% 
+    step_ordinalscore(encoding_trial_num) %>%
+    # to get it to -0.5 and +0.5
+    # have to use step_range because ordinalscore requires int output
+    step_range(encoding_trial_num, min = -0.5, max = 0.5) %>% 
+    # re-centering but NOT scaling because I want it to predict in single interest points
+    step_range(interest, min = -50, max = 50) %>% 
+    # scaling these to range of 10 makes it so unit change is 10% of the full range
+    # the actual lowest j_score is .26 so this gets it to the same range where a score of 0 would range down to -7
+    step_range(j_score, min = -4.4, max = 3) %>%  # %>% 
+    step_rename(from_encoding_late = encoding_trial_num)
+  
+  return (out)
+}
+
 ## set up and fit models ----
 
 fit_retrieval_model <- function (in_data, in_formula) {
@@ -72,7 +105,7 @@ fit_retrieval_model <- function (in_data, in_formula) {
     prep_retrieval_data()
   
   base_recipe <- in_data %>% 
-    make_recipe()
+    make_retrieval_recipe()
   
   # If it's one of the supplementary models, change the recipe roles to add the relevant column as a predictor
   if (as_name(f_lhs(in_formula)) != "acc_recall") {
@@ -91,6 +124,32 @@ fit_retrieval_model <- function (in_data, in_formula) {
                prior = rstanarm::cauchy(0, 2.5),
                prior_intercept = rstanarm::cauchy(0, 2.5))
   
+  out <- fit_general_model(in_data, base_recipe, glmer_spec, in_formula)
+  
+  return (out)
+}
+
+
+fit_encoding_model <- function (in_data, in_formula) {
+  in_data %<>%
+    prep_retrieval_data()
+  
+  base_recipe <- in_data %>% 
+    make_encoding_recipe()
+  
+  # do a linear reg because  interest ranges from 0-100 (or -50 - 50), good enough
+  glmer_spec <- linear_reg() %>% 
+    set_engine("stan_glmer",
+               prior = rstanarm::normal(0, 2.5, autoscale = TRUE),
+               prior_intercept = rstanarm::normal(0, 2.5, autoscale = TRUE),
+               iter = 3000)
+  
+  out <- fit_general_model(in_data, base_recipe, glmer_spec, in_formula)
+  
+  return (out)
+}
+
+fit_general_model <- function (in_data, in_recipe, in_spec, in_formula) {
   # I WANT TO SEE THE CHAINS SAMPLE
   # Theoretically this setting should send the rstanarm output to stdout but...
   # I'm not seeing it...
@@ -98,8 +157,8 @@ fit_retrieval_model <- function (in_data, in_formula) {
     control_workflow()
   
   model_workflow <- workflow() %>% 
-    add_recipe(base_recipe) %>% 
-    add_model(glmer_spec,
+    add_recipe(in_recipe) %>% 
+    add_model(in_spec,
               formula = in_formula)
   
   out <- fit(model_workflow,
