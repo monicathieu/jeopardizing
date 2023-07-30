@@ -37,10 +37,9 @@ tar_source(c("R/preproc/",
 paths_raw_data <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T)
 
 # For the figure fonts
-library(showtext)
-# showtext_auto()
-# figure_font <- "Montserrat"
-# font_add_google(figure_font)
+font_ms <- "Helvetica Neue"
+fontsize_ms <- 10
+
 # source("other_functions.R") # Source other scripts as needed. # nolint
 
 ## targets for demographics and subject IDs ----
@@ -214,8 +213,12 @@ target_models <- list(
   ),
   tar_target(name = model_interest,
              command = fit_encoding_model(in_data = retrieval,
-                                           in_formula = interest ~ j_score + from_encoding_late + (1 | subj_num))
-             )
+                                          in_formula = interest ~ j_score + from_encoding_late + (1 | subj_num))
+  ),
+  tar_target(name = model_alreadyknew,
+             command = fit_alreadyknew_model(in_data = retrieval,
+                                          in_formula = already_knew ~ j_score + (1 | subj_num))
+  )
 )
 
 ## targets for post-model PRE-PLOT objects ----
@@ -231,6 +234,12 @@ target_preplots <- list(
   ),
   tar_target(name = preplot_params_source,
              command = posterior_preplot_params(model_source)
+  ),
+  tar_target(name = preplot_params_interest,
+             command = posterior_preplot_params(model_interest)
+  ),
+  tar_target(name = preplot_params_alreadyknew,
+             command = posterior_preplot_params(model_alreadyknew)
   ),
   # Importante: now that preprocessing is done with a recipe,
   # create the newdata ON THE SCALE OF THE ORIGINAL/REAL DATA
@@ -303,10 +312,13 @@ target_ms_figs <- list(
              command = {
                path <- here::here("ignore", "figs", "ms_fig3.png")
                figure <- plot_grid(plot_demos +
-                                     theme(legend.position = c(1, 1),
-                                           legend.justification = c(1, 1),
-                                           legend.background = element_blank()),
-                                   plot_expertise_hist,
+                                     theme_ms(base_size = fontsize_ms,
+                                              base_family = font_ms,
+                                              legend.position = c(1, 1),
+                                              legend.justification = c(1, 1)),
+                                   plot_expertise_hist +
+                                     theme_ms(base_size = fontsize_ms,
+                                              base_family = font_ms),
                                    labels = letters[1:2],
                                    ncol = 1)
                save_plot(path,
@@ -320,7 +332,9 @@ target_ms_figs <- list(
   tar_target(name = fig_4,
              command = {
                path <- here::here("ignore", "figs", "ms_fig4.png")
-               figure <- plot_fact_by_expertise
+               figure <- plot_fact_by_expertise +
+                 theme_ms(base_size = fontsize_ms,
+                          base_family = font_ms)
                save_plot(path,
                          figure)
                
@@ -330,11 +344,15 @@ target_ms_figs <- list(
   tar_target(name = fig_5,
              command = {
                path <- here::here("ignore", "figs", "ms_fig5.png")
-               figure <- plot_grid(plot_coefs_fact_by_both,
+               figure <- plot_grid(plot_coefs_fact_by_both +
+                                     theme_ms(base_size = fontsize_ms,
+                                              base_family = font_ms),
                                    plot_fixef_fact_by_both + 
-                                     theme(legend.position = c(0, 1),
-                                           legend.justification = c(0, 1),
-                                           legend.background = element_blank()),
+                                     scale_color_manual(values = c("correct" = "#b580b6", "incorrect" = "#2c2aa6")) +
+                                     theme_ms(base_size = fontsize_ms,
+                                              base_family = font_ms,
+                                              legend.position = c(0, 1),
+                                              legend.justification = c(0, 1)),
                                    nrow = 1,
                                    labels = letters[1:2])
                save_plot(path,

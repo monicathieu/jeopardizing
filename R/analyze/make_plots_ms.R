@@ -9,6 +9,20 @@ integer_breaks <- function(n = 5, ...) {
   return(fxn)
 }
 
+## theme elements ----
+
+theme_ms <- function (base_size, base_family, ...) {
+  out <- theme_linedraw(base_size = base_size,
+                        base_family = base_family) +
+    theme(legend.background = element_blank(),
+          plot.background = element_blank(),
+          ...)
+  
+  return (out)
+}
+
+## functions ----
+
 make_plot_demos <- function (demo_data) {
   demo_data %>% 
     mutate(gender = coalesce(gender, "not reported")) %>% 
@@ -30,7 +44,7 @@ make_plot_expertise_hist <- function (expertise_score_data, annotation_font = "H
   
   expertise_score_data %>% 
     ggplot(aes(x = j_score)) +
-    geom_histogram(binwidth = .05, fill = "gray80") +
+    geom_histogram(alpha = 0.5, binwidth = .05, fill = "gray80") +
     geom_vline(xintercept = median_score, linetype = "dotted") +
     annotate("text",
              x = median_score - 0.02,
@@ -202,7 +216,7 @@ make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data) {
                   \(x) recode_factor(as.character(x),
                                      `-0.5` = "incorrect",
                                      `0.5` = "correct"))) %>% 
-    ggplot(aes(x = fct_rev(resp_pic), y = acc_pred, color = fct_rev(resp_source))) +
+    ggplot(aes(x = fct_rev(resp_pic), y = acc_pred, color = resp_source)) +
     geom_line(aes(group = interaction(subj_num, resp_source)),
               data = retrieval_summarized,
               alpha = 0.2) +
@@ -214,5 +228,5 @@ make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data) {
     guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 3))) +
     labs(x = "Forced-choice photo memory",
          y = "P(recall) for novel facts",
-         color = "Forced-choice museum memory")
+         color = "Forced-choice\nmuseum memory")
 }
