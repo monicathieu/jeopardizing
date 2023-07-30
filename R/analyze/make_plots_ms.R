@@ -72,8 +72,8 @@ make_plot_coefs <- function (preplot_params) {
     mutate(clears = if_else(sign(q025) == sign(q975), "yes", "no")) %>% 
     ggplot(aes(x = q500, y = fct_rev(term), color = clears)) +
     geom_vline(xintercept = 0, linetype = "dotted") +
-    geom_errorbarh(aes(xmin = q025, xmax = q975), height = 0, size = 1) +
-    geom_errorbarh(aes(xmin = q100, xmax = q900), height = 0, size = 2) +
+    geom_errorbarh(aes(xmin = q025, xmax = q975), height = 0, linewidth = 1) +
+    geom_errorbarh(aes(xmin = q100, xmax = q900), height = 0, linewidth = 2) +
     geom_point(size = 3) +
     scale_color_manual(values = c("no" = "black", "yes" = "springgreen3")) +
     guides(color = "none") +
@@ -178,8 +178,8 @@ make_plot_fixef_fact_by_other <- function (preplot_fixef, retrieval_data, resp_c
     geom_jitter(data = retrieval_summarized,
                 alpha = 0.5,
                 width = 0.05) +
-    geom_line(aes(group = interaction(j_score, iteration)), alpha = 0.04, size = 0.5) +
-    guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
+    geom_line(aes(group = interaction(j_score, iteration)), alpha = 0.04, linewidth = 0.5) +
+    guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 3))) +
     labs(x = x_label,
          y = "P(recall) for novel facts",
          color = "Expertise (median split)")
@@ -209,9 +209,9 @@ make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data) {
     geom_jitter(data = retrieval_summarized,
                 alpha = 0.5,
                 width = 0.05) +
-    geom_line(aes(group = interaction(resp_source, iteration)), alpha = 0.04, size = 0.5) +
+    geom_line(aes(group = interaction(resp_source, iteration)), alpha = 0.04, linewidth = 0.5) +
     facet_grid(~ fct_rev(j_score)) +
-    guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
+    guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 3))) +
     labs(x = "Forced-choice photo memory",
          y = "P(recall) for novel facts",
          color = "Forced-choice museum memory")
