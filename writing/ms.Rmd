@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 require(targets)
 require(tidyverse)
 require(magrittr)
-require(cowplot)
 require(rlang)
 # source(here::here("R", "get_cleaned_data.R"))
 # load(here::here("ignore", "data", "preplots.rda")) # For the model params
@@ -18,62 +17,19 @@ require(rlang)
 
 target_store <- here::here("ignore", "_targets")
 signif_digits <- 3L
-
-# Specify this separately because plot annotations take their own font arg
-font_ms <- "Helvetica Neue"
-theme_ms <- theme_bw(base_size = 14,
-                     base_family = font_ms) +
-  theme(legend.background = element_blank(),
-        plot.background = element_blank())
 ```
 
 ```{r setup-extra-stat-reports}
-summarize_report <- function (data, col, ..., stat_name = "", unit_name = "", digs = signif_digits) {
-  if (unit_name != "") unit_name %<>% paste0(" ", .)
-  glue_in = if_else(stat_name != "",
-                    "{stat_name} = {a}{unit_name}, 95% CI [{b}, {c}]",
-                    "{a}{unit_name}, 95% CI [{b}, {c}]")
-  
-  col_chr = as_name(enexpr(col))
-  group_cols = enexprs(...)
-  
-  data %<>%
-    select(iteration, !!!group_cols, starts_with(col_chr)) %>%
-    pivot_longer(cols = starts_with(col_chr),
-                 names_to = "metric_type",
-                 values_to = "value",
-                 names_prefix = glue::glue("{col_chr}_"))
-  
-  if (!is.null(group_cols)) {
-    data %<>% group_by(!!!group_cols, metric_type)
-  } else {
-    data %<>% group_by(metric_type)
-  }
-  data %<>%
-    summarize(avg = mean(value, na.rm = T),
-              q025 = quantile(value, .025, na.rm = T),
-              q975 = quantile(value, .975, na.rm = T)) %>% 
-    mutate(across(c("avg", "q025", "q975"),
-                  \(x) formatC(signif(x, digits = digs), digits = digs, format = "fg", flag = "#", mode = "double")),
-           txt_apa = pmap_chr(list(avg, q025, q975),
-                              \(a, b, c) {glue::glue(glue_in)}
-           ),
-           across(c("avg", "q025", "q975"), as.numeric))
-  
-  return (data)
+summarize_kable <- function (data,
+                               col,
+                               digs = signif_digits,
+                               fn_list = list(mean = \(x) mean(x, na.rm = T),
+                                              sd = \(x) sd(x, na.rm = T))) {
+  data %>% 
+    summarize(across({{col}}, fn_list)) %>% 
+    mutate(across(where(is.numeric), \(x) signif(x, digits = digs))) %>% 
+    knitr::kable()
 }
-
-coefs_fact_alone <- tar_read(preplot_params_fact_alone, store = target_store) %>%
-  summarize_report(col = estimate, term, stat_name = "beta")
-
-coefs_fact_by_pic <- tar_read(preplot_params_fact_by_pic, store = target_store) %>%
-  summarize_report(col = estimate, term, stat_name = "beta")
-
-coefs_fact_by_source <- tar_read(preplot_params_fact_by_source, store = target_store) %>%
-  summarize_report(col = estimate, term, stat_name = "beta")
-
-coefs_fact_by_both <- tar_read(preplot_params_fact_by_both, store = target_store) %>%
-  summarize_report(col = estimate, term, stat_name = "beta")
 ```
 
 
@@ -93,152 +49,172 @@ plot_expertise_hist <- tar_read(plot_expertise_hist, store = target_store) +
 ```
 
 ```{r figure-3}
-plot_grid(plot_demos,
-          plot_expertise_hist,
-          labels = LETTERS[1:2], ncol = 1)
+knitr::include_graphics(here::here("ignore", "figs", "ms_fig3.png"))
 ```
-
-**Figure 3.** Participant demographics. **(A)** `r nrow(q_google_demos)` total participants aged 18 and up enrolled in the study (M~age~ = `r mean(q_google_demos$age, na.rm = T) %>% signif(digits = 3)` yrs, SD~age~ = `r sd(q_google_demos$age, na.rm = T) %>% signif(digits = 3)`). Histogram bars are stacked by participant gender such that the total bar height reflects all participants in that age bin. **(B)** Participants ranged in pre-existing trivia expertise, as measured by their score out of 50 questions on a cued-recall general knowledge test. The median expertise score was `r median(j_exp$j_score) * 50`/50 questions correct.
 
 ## Figure 4
 
 ```{r}
-plot_fact_by_expertise <- tar_read(plot_fact_by_expertise, store = target_store)
+knitr::include_graphics(here::here("ignore", "figs", "ms_fig4.png"))
 ```
-
-```{r}
-plot_fact_by_expertise +
-  theme_ms
-```
-
-**Figure 4.** Memory for new facts as a function of trivia expertise. Each point represents one participant’s percent correct fact recall. Participants with higher trivia expertise showed greater recall accuracy for novel facts encoded during the museum encoding phase. Participants with higher trivia expertise were more likely to report already knowing "some" or "all" of the presented facts at encoding [REMINDER TO PUT THE ASSOCIATED NUMBERS IN THE MAIN TEXT], so this figure shows recall only for facts that were judged to be novel. All subsequent analyses were also restricted to trials reported as novel at encoding. A linear regression line with 95% CI is plotted with ggplot2’s `geom_smooth()` to illustrate that participants with greater expertise tended to show better fact memory.
-
-Expertise score coefficient (from fancy multilevel model, takes into account diff number of trials per subject): `r coefs_fact_alone %>% filter(term == "j_score") %>% pull(txt_apa)`
 
 ## Figure 5
 
 ```{r}
-plot_coefs_fact_by_pic <- tar_read(plot_coefs_fact_by_pic, store = target_store)
-plot_fixef_fact_by_pic <- tar_read(plot_fixef_fact_by_pic, store = target_store)
-plot_pic_by_expertise <- tar_read(plot_pic_by_expertise, store = target_store)
-```
-
-```{r, fig.height = 4, fig.width = 12}
-plot_grid(plot_coefs_fact_by_pic + theme_ms,
-          plot_fixef_fact_by_pic + 
-            theme_ms +
-            theme(legend.position = 0:1,
-                  legend.justification = 0:1),
-          plot_pic_by_expertise + theme_ms,
-          nrow = 1,
-          labels = LETTERS[1:3])
+knitr::include_graphics(here::here("ignore", "figs", "ms_fig5.png"))
 # Question from Chris at Alyssano CNS practice lab meeting March 10 2023: Were trivia experts more likely to report certain facts as novel? (like, ones that might be harder)
 ```
 
-**Figure 5.** Memory for associated images predicts memory for new facts in trivia experts. **(A)** Coefficient estimates for a Bayesian logistic regression predicting fact recall as a function of photo memory, trivia expertise, and other covariates. Values are shown for the median coefficient estimate along with the 80% (thick line) and 95% (thin line) posterior intervals. **(B)** Predicted across-participant fixed effects from the model. Each line represents the simple effect of photo memory on fact recall for participants in the upper or lower half of trivia expertise estimated on a particular iteration of the Bayesian regression (2 lines per iteration, 1 for each color/trivia expertise level). The spread and overlap of the color ribbons can thus be taken as a holistic representation of effect size of any differences in predicted fact recall. An interaction is visible in the coefficients **(A)** and predicted simple effects **(B)**, such that trialwise photo memory does not predict fact recall for participants in the lower half of trivia expertise, but successful photo memory predicts successful fact recall for participants in the upper half of trivia expertise. Raw data for individual participants are shown behind the fixed effects, with two points and one connecting line for each participant, reflecting their raw recall accuracy for facts presented with photos that were subsequently incorrectly vs. correctly identified. **(C)** Photo memory as a function of trivia expertise. Each point represents one participant’s percent correct photo choice. The chance line is shown at y = 0.5. A linear regression line with 95% CI is plotted with ggplot2’s `geom_smooth()` to illustrate that trivia expertise did not predict photo memory. 
+# Stats to copy and paste
 
+Or to inject if I can figure out a better way that preserves the Google-Docsery...
 
-Interaction coefficient: `r coefs_fact_by_pic %>% filter(term == "resp_pic:j_score") %>% pull(txt_apa)`
+## Demographics
 
-## Figure 6
+Number of participants: `r nrow(q_google_demos)`
+
+Participants breakdown by gender:
 
 ```{r}
-plot_coefs_fact_by_source <- tar_read(plot_coefs_fact_by_source, store = target_store)
-plot_fixef_fact_by_source <- tar_read(plot_fixef_fact_by_source, store = target_store)
-plot_source_by_expertise <- tar_read(plot_source_by_expertise, store = target_store)
+q_google_demos %>% 
+  count(gender) %>% 
+  knitr::kable()
+```
+
+Participant summary by age:
+
+```{r}
+q_google_demos %>% 
+  summarize_kable(age)
+```
+
+## Task info
+
+Encoding trial duration:
+
+```{r}
+encoding <- tar_read(encoding, store = target_store)
+
+encoding %>%
+  # there is literally _one_ trial where the timing seems to have messed up and run over
+  filter(rt <= 35100) %>% 
+  mutate(rt = rt / 1000) %>% 
+  summarize_kable(rt)
+```
+
+Expertise score:
+
+```{r}
+j_exp %>% 
+  # to get it in units of questions
+  mutate(j_score = j_score * 50) %>% 
+  summarize_kable(j_score,
+                  fn_list = list(min = \(x) min(x, na.rm = T),
+                                 max = \(x) max(x, na.rm = T),
+                                 median = \(x) median(x, na.rm = T)))
+```
+
+Number of novel facts at encoding:
+
+```{r}
+encoding %>% 
+  filter(already_knew == "none") %>% 
+  count(subj_num) %>% 
+  summarize_kable(n,
+                  digs = 2L,
+                  fn_list = list(min = \(x) min(x, na.rm = T),
+                                 mean = \(x) mean(x, na.rm = T),
+                                 sd = \(x) sd(x, na.rm = T)))
+```
+
+## Major results
+
+### Encoding
+
+Beta median/CIs from the model with **interest** as the outcome variable.
+
+Note: For this model, effective N failed to reach 10% of the sampling iterations for several parameters, even after increasing the number of sampling iterations to 3000 iterations/chain. However, no other associated model reliability parameters (like Rhat) suggested concern. We thus report these model outcomes as is. We expect that some of the apparently low N~eff~ may arise from individual participants having different distributions of interst ratings across their facts.
+
+```{r}
+fn_list_model.coefs <- list(q025 = \(x) quantile(x, .025),
+                            q500 = \(x) median(x, na.rm = T),
+                            q975 = \(x) quantile(x, .975))
+
+tar_read(preplot_params_interest, store = target_store) %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+Beta median/CIs from the model with **prior knowledge** as the outcome variable. Should be encoded with none as 0 and some/all as 1.
+
+```{r}
+tar_read(preplot_params_alreadyknew, store = target_store) %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
 ```
 
 
-```{r, fig.height = 4, fig.width = 12}
-plot_grid(plot_coefs_fact_by_source + theme_ms,
-          plot_fixef_fact_by_source + 
-            theme_ms +
-            theme(legend.position = 0:1,
-                  legend.justification = 0:1),
-          plot_source_by_expertise + theme_ms,
-          nrow = 1,
-          labels = LETTERS[1:3])
-```
+### Retrieval
 
-**Figure 6.** Memory for encoding source (i.e., museum identity) predicts memory for new facts. **(A)** Coefficient estimates for a Bayesian logistic regression predicting fact recall as a function of museum memory, trivia expertise, and other covariates. Values are shown for the median coefficient estimate along with the 80% (thick line) and 95% (thin line) posterior intervals. **(B)** Predicted across-participant fixed effects from the model. Each line represents the simple effect of museum memory on fact recall for participants in the upper or lower half of trivia expertise estimated on a particular iteration of the Bayesian regression (2 lines per iteration, 1 for each color/trivia expertise level). The spread and overlap of the color ribbons can thus be taken as a holistic representation of effect size of any differences in predicted fact recall. Two main effects are visible in the coefficients **(A)** and predicted simple effects **(B)**, such that trialwise museum memory predicts fact recall for participants irrespective of trivia expertise, and participants in the upper half of trivia expertise have greater fact recall irrespective of museum memory. Raw data for individual participants are shown behind the fixed effects, with two points and one connecting line for each participant, reflecting their raw recall accuracy for facts associated with museums that were subsequently incorrectly vs. correctly identified as the encoding source. **(C)** Museum memory as a function of trivia expertise. Each point represents one participant’s percent correct museum choice. The chance line is shown at y = 0.5. A linear regression line with 95% CI is plotted with ggplot2’s `geom_smooth()` to illustrate that participants with greater expertise tended to show better museum memory. 
+#### Beta medians & CIs
 
-Interaction coefficient: `r coefs_fact_by_source %>% filter(term == "resp_source:j_score") %>% pull(txt_apa)`
-
-## Figure 7
-
-This may come to supplant both figures 5 and 6 if we move forward with this version of the analysis.
+Beta median/CIs from the model with **photo memory** as the outcome variable
 
 ```{r}
-preplot_fixef_fact_by_both <- tar_read(preplot_fixef_fact_by_both, store = target_store)
+tar_read(preplot_params_pic, store = target_store) %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
 
-preplot_fixef_fact_by_both %>% 
-  mutate(across(c(j_score, resp_pic, resp_source), \(x) if_else(x > 0, "high", "low")),
-         resp_pic = paste0("pic.", resp_pic),
-         resp_source = paste0("source.", resp_source)) %>% 
-  pivot_wider(names_from = c(resp_pic, resp_source),
-              values_from = acc_pred) %>% 
-  mutate(superdiff = (pic.high_source.high - pic.low_source.high) - (pic.high_source.low - pic.low_source.low)) %>% 
-  select(-starts_with("pic.")) %>% 
+Beta median/CIs from the model with **museum memory** as the outcome variable
+
+```{r}
+tar_read(preplot_params_source, store = target_store) %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+
+Beta medians/CIs from the **omnibus model**
+
+```{r}
+preplot_params_fact_by_both <- tar_read(preplot_params_fact_by_both, store = target_store) 
+
+preplot_params_fact_by_both %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+#### Omnibus model simple effects
+
+"low" trivia expertise for the preplots is j_score = -2, while "high" trivia expertise is +1
+
+```{r}
+preplot_params_fact_by_both %>% 
+  filter(term %in% c("resp_pic:resp_source", "resp_pic:resp_source:j_score")) %>% 
+  mutate(term = str_replace_all(term, ":", ".")) %>% 
+  pivot_wider(names_from = term,
+              values_from = estimate) %>% 
+  mutate(low = resp_pic.resp_source - 2*resp_pic.resp_source.j_score,
+         high = resp_pic.resp_source + resp_pic.resp_source.j_score) %>% 
+  select(iteration, low, high) %>% 
+  pivot_longer(cols = c(low, high),
+               names_to = "j_score",
+               values_to = "estimate") %>% 
   group_by(j_score) %>% 
-  summarize(avg = mean(superdiff, na.rm = T),
-            q025 = quantile(superdiff, .025, na.rm = T),
-            q500 = median(superdiff, na.rm = T),
-            q975 = quantile(superdiff, .975, na.rm = T))
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
 ```
 
 ```{r}
-plot_coefs_fact_by_both <- tar_read(plot_coefs_fact_by_both, store = target_store)
-plot_fixef_fact_by_both <- tar_read(plot_fixef_fact_by_both, store = target_store)
+preplot_fixef_fact_by_both %>% 
+  group_by(j_score, resp_pic, resp_source) %>% 
+  summarize_kable(acc_pred,
+                  fn_list = list(median = median))
 ```
 
-```{r, fig.height = 4, fig.width = 12}
-plot_grid(plot_coefs_fact_by_both + theme_ms,
-          plot_fixef_fact_by_both + 
-            theme_ms +
-            theme(legend.position = 0:1,
-                  legend.justification = 0:1),
-          nrow = 1,
-          labels = LETTERS[1:2])
-```
-
-**Figure 7.** Memory for associated episodic details interacts to predict memory for new facts. **(A)** Coefficient estimates for a Bayesian logistic regression predicting fact recall. Values are shown for the median coefficient estimate along with the 80% (thick line) and 95% (thin line) posterior intervals. **(B)** Predicted across-participant fixed effects from the model. Each line represents the simple effect of museum memory on fact recall for participants in the upper or lower half of trivia expertise estimated on a particular iteration of the Bayesian regression (2 lines per iteration, 1 for each color/trivia expertise level). The spread and overlap of the color ribbons can thus be taken as a holistic representation of effect size of any differences in predicted fact recall. Raw data for individual participants are shown behind the fixed effects, with two points and one connecting line for each participant, reflecting their raw recall accuracy for facts presented with photos that were subsequently incorrectly vs. correctly identified. The left and right panels split up trials with museums that were subsequently incorrectly vs. correctly identified as the encoding source. Two main effects are visible in the coefficients **(A)** and predicted simple effects **(B)**, such that trialwise museum memory predicts fact recall for participants irrespective of trivia expertise, and participants in the upper half of trivia expertise have greater fact recall irrespective of museum memory. A two-way interaction between photo and museum memory is visible, such that fact recall is higher when participants correctly recognized _both_ the associated photo and encoding museum. Finally, a three-way interaction is visible, such that that two-way interaction effect of joint photo and museum memory predicting fact recall is stronger for participants higher in trivia expertise.
-
-<!--
-# OLD STUFF I FOUND IN HERE: Intro
-
-Derpy abstract for myself:
-
-Individual behavioral differences in human memory pay testament to the complexity of our memory systems. Studying people performing at extremes of the memory spectrum can help us learn more about memory systems as they might function in the typical individual. However, memory, especially superior memory, is not a single construct. People may exhibit markedly strong memory in a variety of ways, each of which might rely on a different feature of the memory system. Nearly all research on people with superior memory has focused on superior memorizers, or individuals with the ability, through some combination of untrained and trained strategy, to quickly encode large amounts of information, typically otherwise meaningless, and retrieve it with high accuracy. 
-
-Not all feats of impressive memory involve encoding large bodies of information at once, whether incidental or intentional. Other feats of memory are (or appear) more retrieval-based. Trivia games are one popular example, where competitors attempt to retrieve the most general knowledge, often as quickly as possible. Trivia experts are able to rapidly retrieve a broad range of facts, often having first encoded these facts years in the past. Notably, they often do this without apparent use of any memorization strategy [CITE]. Given two people with approximately equivalent life experience, and exposure to general knowledge through schooling, what leads one person to be more successful in retaining and/or retrieving facts in a cued recall situation?
-
-Basic outline:
-
-- Episodic and semantic memory: separate? intertwined?
-    - MTL amnesics perform worse than controls on semantic fluency tasks (name exemplars of X category) that can be solved with an autobiographical episodic strategy [e.g. @Greenberg:2009fq; @Sheldon:2012ju]
-    - To the degree that a task is not "process-pure," we are likely to observe interdependencies between semantic and episodic memory if both might be individually contributing to task performance. But what about semantic memory tasks that do not have obvious episodic strategies, typically those that are speeded enough to preclude episodic elaboration?
-        - Participants making famous/nonfamous judgments of names, and reading names out loud, are faster to judge/read famous names with greater autobiographical significance, such that those names are more likely to be associated with autobiographical memories [@Westmacott:2003ee]
-        - Participants make lexical decisions about studied words faster for words they will later "remember" vs "know" [@Sheldon:2010cd]. The authors suggest this provides evidence for ecphory or some other fast episodic retrieval component
-        - Ecphoric signals may be detected _early_ during old/new recognition trials [@Waldhauser:2016fx]
-        - Can this putative ecphory also support complex semantic retrieval, like answering general knowledge questions?
-- What can studying trivia experts tell us about overlap between episodic and semantic memory?
-    - individual differences in ecphoric strength at retrieval could contribute to 
-    - detect differing contributions of encoding- and retrieval-stage processes to overall retrieval success
-    - 
-- What can studying trivia experts tell us that studying other special populations doesn't?
-    - Relative to **amnesic patients:** patient work allows us to make critical claims about necessary and sufficient contributions of different structures/systems to memory tasks. However, these conclusions might not apply at the other end of the spectrum. Said otherwise, the contribution of "pure" episodic vs semantic components to task performance might not vary linearly with episodic and semantic memory ability all the way along the spectrum from impaired to exceptional.
-    - Relative to folks with **highly superior autobiographical memory:** Most people with HSAM who have been documented in case and group studies fail to show superior memory for historical events that happened before they were born. General knowledge expertise seems epiphenomenal to superior memory for current events as a subset of autobiographical memory [@McGaugh:2014jh]
-    - Relative to **memory champions:** modern memory champions deploy deliberate mnemonic strategies to encode huge amounts of information in a single sitting. General knowledge generally is acquired bit by bit and then tested at once, as opposed to having to encode at once and retrieve at once. Memory champions SEEM (cite? hard to find when people test this stuff) not to show above average general knowledge
-
-    
-- What research has been done on superior memory?
-    - Superior memorizers
-    - (MAYBE SCRATCH) savants?
-    - Highly superior autobiographical memory
-- What can studying trivia experts tell us that studying other superior memory groups doesn't?
-    - Trivia expertise might be more likely to derive from innate memory differences than superior memorization, which tends to rely on becoming facile with a strategy
-    - Trivia facts, as must anything else, must be encoded through episodic mechanisms, but once encoded, are considered squarely within the domain of semantic memory. Studying trivia memory can tell us a lot about the putative boundary between episodic and semantic memory
-    - [@Brandt:2017cd]
-- What research has been done on general knowledge capacity as its own memory construct?
-- Thus, the current study
--->
