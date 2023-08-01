@@ -1,8 +1,12 @@
 ---
-title: "J-Study supplement"
-author: "Monica Thieu, Lauren Wilkins, & Mariam Aly"
+title: "Supplementary material"
+subtitle: "Main paper: Episodic memory bolsters acquisition of new semantic knowledge in trivia experts"
+author: "MT, LW, & MA"
 date: "Updated `r Sys.Date()`"
-output: html_document
+output:
+  pdf_document:
+    toc: true
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -25,40 +29,79 @@ summarize_kable <- function (data,
     mutate(across(where(is.numeric), \(x) signif(x, digits = digs))) %>% 
     knitr::kable()
 }
+
+fn_list_model.coefs <- list(ci_95_lower = \(x) quantile(x, .025),
+                            median = \(x) median(x, na.rm = T),
+                            ci_95_upper = \(x) quantile(x, .975))
 ```
-
-# Stats to copy and paste
-
-Or to inject if I can figure out a better way that preserves the Google-Docsery...
 
 ## Demographics
 
-```{r}
+```{r include=FALSE}
 q_google_demos <- tar_read(q_google_demos, store = target_store)
+j_exp <- tar_read(expertise_summarized, store = target_store)
+
+nrow(q_google_demos)
 ```
 
-Number of participants: `r nrow(q_google_demos)`
+### Figure 1: Trivia expertise as a function gender
 
-Participants breakdown by gender:
-
-```{r}
+```{r, include=FALSE}
+# These stats are in the paper!
 q_google_demos %>% 
   count(gender) %>% 
   knitr::kable()
 ```
 
-Participant summary by age:
+```{r}
+q_google_demos %>% 
+  left_join(j_exp %>% mutate(subj_num = factor(subj_num))) %>% 
+  mutate(gender = coalesce(gender, "Not reported")) %>% 
+  ggplot(aes(x = j_score, fill = gender)) +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  labs(x = "Trivia expertise score") +
+  theme_bw()
+```
+
+Men in our sample tended to score higher than women and genderqueer participants. LearnedLeague, the website from which we recruited, has more men than women participants, so we do not interpret these results any further.
+
+### Table 2: Participant breakdown by race
 
 ```{r}
+# These stats are in the paper!
+q_google_demos %>% 
+  # Anonymizing this one friend
+  mutate(race = if_else(race == "Asian, I want to be clear that I am Indian and not East Asian", "Asian", race)) %>% 
+  count(race) %>% 
+  arrange(desc(n)) %>% 
+  knitr::kable()
+```
+
+The vast majority of participants reported their race as White, with the largest minority of participants reporting their race as Asian/Pacific Islander. While LearnedLeague does not collect race information on members, we expect that this distribution is representative of website membership. We do not use race in any subsequent analyses because of the low race diversity in the sample.
+
+```{r, include=FALSE}
+# These stats are in the paper!
 q_google_demos %>% 
   summarize_kable(age)
 ```
 
-## Task info
+## Expertise pre-test
 
-Encoding trial duration:
+After completing the general knowledge pre-test, we asked participants to rate their meta-memory for each question. Ratings were based on Pereverseff and Bodner (2020)'s ratings. Participants were instructed as follows:
 
-```{r}
+- "Learning memory": When the answer came to mind, you also remembered a specific prior experience of learning this fact (e.g., how, when, and/or where you learned it). It does not have to be a memory of the first time you learned it.
+- "Related memory": When the answer came to mind, you also remembered a specific related personal memory, but the memory was not about learning this fact.
+- "Just know": When the answer came to mind, a specific personal memory did not come to mind. Instead, the answer just seems to be part of your general knowledge.
+- "Guess": You do not experience a specific personal memory or a general feeling of knowing the answer. It is an educated guess that you may have arrived at with some reasoning.
+- "Don't know": You have no idea what the answer could be, and you cannot even make a guess. You do not experience a specific personal memory or a general feeling of knowing the answer.
+
+After participants gave their metamemory ratings, we randomly selected one general knowledge fact endorsed by the participant for each of the five potential labels,
+and asked them to describe their metamemory state for that fact in words. We did not analyze any of the metamemory ratings because our validity checks indicated that participants did not use the ratings as instructed. Specifically, when we inspected participants’ descriptions, we found enough responses indicating “just know”-style metamemory for memories that participants had tagged with the “remember” responses (“learning memory” and “related memory”) that we considered the data to be unusable based on participants failing to follow task instructions.
+
+## Encoding task
+
+```{r include=FALSE}
+# These stats are in the paper!
 encoding <- tar_read(encoding, store = target_store)
 
 encoding %>%
@@ -68,11 +111,8 @@ encoding %>%
   summarize_kable(rt)
 ```
 
-Expertise score:
-
-```{r}
-j_exp <- tar_read(expertise_summarized, store = target_store)
-
+```{r include=FALSE}
+# These stats are in the paper!
 j_exp %>% 
   # to get it in units of questions
   mutate(j_score = j_score * 50) %>% 
@@ -82,9 +122,8 @@ j_exp %>%
                                  median = \(x) median(x, na.rm = T)))
 ```
 
-Number of novel facts at encoding:
-
-```{r}
+```{r include=FALSE}
+# These stats are in the paper!
 encoding %>% 
   filter(already_knew == "none") %>% 
   count(subj_num) %>% 
@@ -95,26 +134,7 @@ encoding %>%
                                  sd = \(x) sd(x, na.rm = T)))
 ```
 
-## Major results
-
-### Encoding
-
-Beta median/CIs from the model with **interest** as the outcome variable.
-
-Note: For this model, effective N failed to reach 10% of the sampling iterations for several parameters, even after increasing the number of sampling iterations to 3000 iterations/chain. However, no other associated model reliability parameters (like Rhat) suggested concern. We thus report these model outcomes as is. We expect that some of the apparently low N~eff~ may arise from individual participants having different distributions of interst ratings across their facts.
-
-```{r}
-fn_list_model.coefs <- list(q025 = \(x) quantile(x, .025),
-                            q500 = \(x) median(x, na.rm = T),
-                            q975 = \(x) quantile(x, .975))
-
-tar_read(preplot_params_interest, store = target_store) %>%
-  group_by(term) %>% 
-  summarize_kable(estimate,
-                  fn_list = fn_list_model.coefs)
-```
-
-Beta median/CIs from the model with **prior knowledge** as the outcome variable. Should be encoded with none as 0 and some/all as 1.
+### Table 3: Model coefficients for encoding familiarity as a function of trivia expertise
 
 ```{r}
 tar_read(preplot_params_alreadyknew, store = target_store) %>%
@@ -123,33 +143,25 @@ tar_read(preplot_params_alreadyknew, store = target_store) %>%
                   fn_list = fn_list_model.coefs)
 ```
 
+This model was run as a Bayesian multilevel logistic regression (with the same model setting as the main model reported in the main text) predicting fact familiarity for each fact (unfamiliar = 0, familiar = 1) as a function of trivia expertise, with a random intercept for each participant. Participants rated their familiarity as "none", "some", or "all" for each encoding fact. For this analysis, we binned "some" and "all" together to compare the totally unfamiliar facts against facts for which participants reported _at least_ some familiarity.
 
-### Retrieval
-
-#### Beta medians & CIs
-
-Beta median/CIs from the model with **photo memory** as the outcome variable
+### Table 4: Model coefficients for encoding interest as a function of trivia expertise
 
 ```{r}
-tar_read(preplot_params_pic, store = target_store) %>%
+tar_read(preplot_params_interest, store = target_store) %>%
   group_by(term) %>% 
   summarize_kable(estimate,
                   fn_list = fn_list_model.coefs)
 ```
 
-Beta median/CIs from the model with **museum memory** as the outcome variable
+This model was run as a Bayesian multilevel _linear_ regression (with the same model settings as the main model reported in the main text) predicting interest at encoding (on a 0-100 point scale, centered at 50 pts) as a function of trivia expertise, with a random intercept for each participant. We also included a covariate for first vs. second museum, coded the same way as it was for the model in the main text.
 
-```{r}
-tar_read(preplot_params_source, store = target_store) %>%
-  group_by(term) %>% 
-  summarize_kable(estimate,
-                  fn_list = fn_list_model.coefs)
-```
+For this model, effective N failed to reach 10% of the sampling iterations for several parameters, even after increasing the number of sampling iterations to 3000 iterations/chain. However, no other associated model reliability parameters (like Rhat) suggested concern. We thus report these model outcomes as is. We expect that some of the apparently low N~eff~ may arise from individual participants having different distributions of interest ratings across their facts.
 
+## Retrieval tasks
 
-Beta medians/CIs from the **omnibus model**
-
-```{r}
+```{r include=FALSE}
+# These stats are in the paper!
 preplot_params_fact_by_both <- tar_read(preplot_params_fact_by_both, store = target_store) 
 
 preplot_params_fact_by_both %>%
@@ -158,11 +170,10 @@ preplot_params_fact_by_both %>%
                   fn_list = fn_list_model.coefs)
 ```
 
-#### Omnibus model simple effects
-
-"low" trivia expertise for the preplots is j_score = -2, while "high" trivia expertise is +1
-
-```{r}
+```{r include=FALSE}
+# These stats are in the paper!
+# "low" trivia expertise for the preplots is j_score = -2
+# while "high" trivia expertise is +1
 preplot_params_fact_by_both %>% 
   filter(term %in% c("resp_pic:resp_source", "resp_pic:resp_source:j_score")) %>% 
   mutate(term = str_replace_all(term, ":", ".")) %>% 
@@ -179,10 +190,32 @@ preplot_params_fact_by_both %>%
                   fn_list = fn_list_model.coefs)
 ```
 
-```{r}
+```{r include=FALSE}
+# These stats are in the paper!
 tar_read(preplot_fixef_fact_by_both, store = target_store) %>% 
   group_by(j_score, resp_pic, resp_source) %>% 
   summarize_kable(acc_pred,
                   fn_list = list(median = median))
 ```
 
+### Table 5: Model coefficients for photo memory as a function of trivia expertise
+
+```{r}
+tar_read(preplot_params_pic, store = target_store) %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+This model was run as a Bayesian multilevel logistic regression (with the same model settings as the main model reported in the main text) predicting binary photo recognition memory as a function of trivia expertise, with a random intercept for each participant. We also included covariates for interest at encoding and first vs. second museum, coded the same way as they were for the model in the main text.
+
+### Table 6: Model coefficients for museum memory as a function of trivia expertise
+
+```{r}
+tar_read(preplot_params_source, store = target_store) %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+This model was run as a Bayesian multilevel logistic regression (with the same model settings as the main model reported in the main text) predicting binary museum recognition memory as a function of trivia expertise, with a random intercept for each participant. We also included covariates for interest at encoding and first vs. second museum, coded the same way as they were for the model in the main text.
