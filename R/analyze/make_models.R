@@ -89,7 +89,7 @@ make_interest_recipe <- function (retrieval_data_prepped) {
     # have to use step_range because ordinalscore requires int output
     step_range(encoding_trial_num, min = -0.5, max = 0.5) %>% 
     # re-centering but and scaling because it might behave better at smaller range
-    step_range(interest, min = -5, max = 5) %>% 
+    step_range(interest, min = -50, max = 50) %>% 
     # scaling these to range of 10 makes it so unit change is 10% of the full range
     # the actual lowest j_score is .26 so this gets it to the same range where a score of 0 would range down to -7
     step_range(j_score, min = -4.4, max = 3) %>%  # %>% 
