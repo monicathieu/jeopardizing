@@ -1,33 +1,11 @@
-## setup ----
-
-require(tidyverse)
-require(googledrive)
-require(magrittr)
-
-# Should download master spreadsheet to local copy for R manipulation
-# Trust me, the ID is correct
-# Checked it using drive_get("~/jstudy/master_spreadsheet")
-# But that takes a little bit to run so I hard coded it here
-
 ## parse master spreadsheet ----
 
-refresh_master_spreadsheet_raw <- function () {
-  drive_download(file = as_id("1degtvNziMvUM3V7wBX6VPkYyuUsEKOezWb8VZ933Irw"),
-                 path = here::here("stim_stuff", "master_spreadsheet.csv"),
-                 type = "csv",
-                 overwrite = TRUE)
-  return (read_csv(here::here("stim_stuff", "master_spreadsheet.csv")))
-}
-
-parse_master_spreadsheet <- function () {
+parse_master_spreadsheet <- function (master_spreadsheet_path, duration_data) {
   
-  master_spreadsheet_raw <- read_csv(here::here("stim_stuff", "master_spreadsheet.csv"))
-  
-  durations <- read_csv(here::here("ignore", "narration", "durations_parsed.csv"))
-  
-  out <- master_spreadsheet_raw %>% 
+  out <- master_spreadsheet_path %>%
+    read_csv() %>% 
     select(-ends_with("pretest")) %>% 
-    left_join(durations, by = "trial_num") %>% 
+    left_join(duration_data, by = "trial_num") %>% 
     pivot_longer(cols = -c(trial_num:display),
                  names_to = c("category", ".value"),
                  names_sep = 5L) %>% 
@@ -86,6 +64,6 @@ parse_master_spreadsheet <- function () {
                                 test_answer),
                 names_glue = "{.value}.{category_label_academic}_{category_label_nonacademic}")
   
-  write_csv(out, here::here("stim_stuff", "master_spreadsheet_parsed.csv"))
+  # write_csv(out, here::here("stim_stuff", "master_spreadsheet_parsed.csv"))
   return (out)
 }
