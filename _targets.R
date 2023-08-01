@@ -31,7 +31,8 @@ options(# clustermq.scheduler = "multicore",
 # Install packages {{future}}, {{future.callr}}, and {{future.batchtools}} to allow use_targets() to configure tar_make_future() options.
 
 # Run the R scripts in the R/ folder with your custom functions:
-tar_source(c("R/preproc/",
+tar_source(c("R/prep_task/",
+             "R/preproc/",
              "R/analyze/"))
 
 paths_raw_data <- list.files(here::here("ignore", "data", "raw", "real"), recursive = T, full.names = T)
@@ -41,6 +42,70 @@ font_ms <- "Helvetica Neue"
 fontsize_ms <- 10
 
 # source("other_functions.R") # Source other scripts as needed. # nolint
+
+## targets for RAW DATA from GOOGLE DRIVE (only works for authors) ----
+
+target_gdrive <- list(
+  tar_target(name = master_spreadsheet_raw,
+             command = get_googledrive_csv(drive_id = "1degtvNziMvUM3V7wBX6VPkYyuUsEKOezWb8VZ933Irw",
+                                   destination_path = here::here("stimlists", "master_spreadsheet.csv")),
+             format = "file"),
+  tar_target(name = q_google_demos_raw,
+             command = get_googledrive_csv(drive_id = "1yW13tK4dVr8MXtJTaZxV_3M8IaD5TqhbzD8QKPuEndM",
+                                           destination_path = here::here("ignore", "data", "raw", "real", "demographics.csv")),
+             format = "file"),
+  tar_target(name = expertise_questions_raw,
+             command = get_googledrive_csv(drive_id = "1e7R4CSDjSA5trC820aiwUbe7szjn7DTfMiZPI4my8Rk",
+                                           destination_path = here::here("stimlists", "jeopardy_spreadsheet.csv")),
+             format = "file")
+)
+
+## targets for COPIES OF RAW DATA (works for everyone else) ----
+
+target_from.gdrive <- list(
+  tar_target(name = master_spreadsheet_raw,
+             command = here::here("stimlists", "master_spreadsheet.csv"),
+             format = "file"),
+  tar_target(narration_durations_raw,
+             command = here::here("ignore", "narration", "durations.txt"),
+             format = "file"),
+  tar_target(name = q_google_demos_raw,
+             command = here::here("ignore", "data", "raw", "real", "demographics.csv"),
+             format = "file"),
+  tar_target(name = expertise_questions_raw,
+             command = here::here("stimlists", "jeopardy_spreadsheet.csv"),
+             format = "file")
+)
+
+## targets for stimlists ----
+
+target_stimlists <- list(
+  tar_target(name = narration_durations,
+  command = parse_narr_durations(narration_durations_raw)),
+  tar_target(name = master_spreadsheet,
+             command = parse_master_spreadsheet(master_spreadsheet_raw,
+                                                narration_durations)),
+  tar_target(name = stimlists_pretest,
+             command = make_spreadsheet_pretest(master_spreadsheet_raw,
+                                                stimlist_folder = "stimlists"),
+             format = "file"),
+  tar_target(name = stimlists_encoding,
+             command = make_spreadsheet_encoding(master_spreadsheet,
+                                                 stimlist_folder = "stimlists"),
+             format = "file"),
+  tar_target(name = stimlist_retrieval_facts,
+             command = make_spreadsheet_retrieval_facts(master_spreadsheet,
+                                                        stimlist_folder = "stimlists"),
+             format = "file"),
+  tar_target(name = stimlist_retrieval_pics,
+             command = make_spreadsheet_retrieval_pics(master_spreadsheet,
+                                                       stimlist_folder = "stimlists"),
+             format = "file"),
+  tar_target(name = stimlist_retrieval_source,
+             command = make_spreadsheet_retrieval_source(master_spreadsheet,
+                                                         stimlist_folder = "stimlists"),
+             format = "file")
+)
 
 ## targets for demographics and subject IDs ----
 target_demos <- list(
@@ -52,10 +117,6 @@ target_demos <- list(
                read_gorilla_data() %>% 
                clean_demos_ids()
   ),
-  tar_target(name = q_google_demos_raw,
-             command = get_googledrive_csv(drive_id = "1yW13tK4dVr8MXtJTaZxV_3M8IaD5TqhbzD8QKPuEndM",
-                                           destination_path = here::here("ignore", "data", "raw", "real", "demographics.csv")),
-             format = "file"),
   tar_target(name = q_google_demos,
              command = q_google_demos_raw %>% 
                read_csv() %>% 
@@ -65,10 +126,6 @@ target_demos <- list(
 
 ## targets for expertise pre-test and metamemory judgments ----
 target_expertise <- list(
-  tar_target(name = expertise_questions_raw,
-             command = get_googledrive_csv(drive_id = "1e7R4CSDjSA5trC820aiwUbe7szjn7DTfMiZPI4my8Rk",
-                                           destination_path = here::here("stim_stuff", "jeopardy_spreadsheet.csv")),
-             format = "file"),
   tar_target(name = expertise_questions,
              command = expertise_questions_raw %>% 
                read_csv() %>% 
@@ -388,17 +445,25 @@ target_misc_qs <- list(
 )
 
 target_rmds <- list(
-  tar_render(name = figs_and_captions,
-             path = here::here("writing", "ms.Rmd"))
+  tar_render(name = supplement,
+             path = here::here("writing", "supplement.Rmd"))
 )
 
 ## Instantiate targets ----
-c(target_demos,
+
+# Note that the first list of targets is target_from.gdrive
+# Which pulls the static copies of files that we originally kept on Google Drive
+# and thus should work for everyone,
+# because we uploaded files to OSF using the same structure
+c(target_from.gdrive,
+  target_stimlists,
+  target_demos,
   target_expertise,
   target_main_task,
   target_misc_qs,
   target_models,
   target_preplots,
   target_ms_plots,
-  target_ms_figs)
+  target_ms_figs,
+  target_rmds)
 
