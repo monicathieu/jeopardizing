@@ -260,6 +260,11 @@ target_models <- list(
              command = fit_retrieval_model(in_data = retrieval,
                                    in_formula = acc_recall ~ resp_pic * resp_source * j_score + from_encoding_late + interest + (1 | subj_num))
   ),
+  tar_target(name = model_fact_by_both_known.facts,
+             command = fit_retrieval_model(in_data = retrieval,
+                                           in_formula = acc_recall ~ resp_pic * resp_source * j_score + from_encoding_late + interest + (1 | subj_num),
+                                           novel_facts = FALSE)
+  ),
   tar_target(name = model_pic,
              command = fit_retrieval_model(in_data = retrieval,
                                            in_formula = resp_pic ~ j_score + from_encoding_late + interest + (1 | subj_num))
@@ -275,6 +280,25 @@ target_models <- list(
   tar_target(name = model_alreadyknew,
              command = fit_alreadyknew_model(in_data = retrieval,
                                           in_formula = already_knew ~ j_score + (1 | subj_num))
+  ),
+  tar_target(name = model_pic_rt.recall,
+             command = fit_retrieval.rt_model(in_data = retrieval,
+                                           in_formula = resp_pic ~ rt_start_recall * j_score + from_encoding_late + interest + (1 | subj_num))
+               ),
+  tar_target(name = model_source_rt.recall,
+             command = fit_retrieval.rt_model(in_data = retrieval,
+                                              in_formula = resp_source ~ rt_start_recall * j_score + from_encoding_late + interest + (1 | subj_num))
+  ),
+  tar_target(name = model_fact_academic,
+             command = fit_retrieval.category_model(in_data = retrieval,
+                                                    # the formula is like this bc step_dummy renames the dummy vars
+                                                    in_formula = acc_recall ~ category_arms + category_musi + j_score + from_encoding_late + interest + (1 | subj_num),
+                                                    category_group = "academic")
+  ),
+  tar_target(name = model_fact_nonacademic,
+             command = fit_retrieval.category_model(in_data = retrieval,
+                                                    in_formula = acc_recall ~ category_cook + category_dino + j_score + from_encoding_late + interest + (1 | subj_num),
+                                                    category_group = "nonacademic")
   )
 )
 
@@ -285,6 +309,9 @@ target_preplots <- list(
              ),
   tar_target(name = preplot_params_fact_by_both,
              command = posterior_preplot_params(model_fact_by_both)
+  ),
+  tar_target(name = preplot_params_fact_by_both_known.facts,
+             command = posterior_preplot_params(model_fact_by_both_known.facts)
   ),
   tar_target(name = preplot_params_pic,
              command = posterior_preplot_params(model_pic)
@@ -297,6 +324,18 @@ target_preplots <- list(
   ),
   tar_target(name = preplot_params_alreadyknew,
              command = posterior_preplot_params(model_alreadyknew)
+  ),
+  tar_target(name = preplot_params_pic_rt.recall,
+             command = posterior_preplot_params(model_pic_rt.recall)
+  ),
+  tar_target(name = preplot_params_source_rt.recall,
+             command = posterior_preplot_params(model_source_rt.recall)
+  ),
+  tar_target(name = preplot_params_fact_academic,
+             command = posterior_preplot_params(model_fact_academic)
+  ),
+  tar_target(name = preplot_params_fact_nonacademic,
+             command = posterior_preplot_params(model_fact_nonacademic)
   ),
   # Importante: now that preprocessing is done with a recipe,
   # create the newdata ON THE SCALE OF THE ORIGINAL/REAL DATA
@@ -325,6 +364,14 @@ target_preplots <- list(
   tar_target(name = preplot_fixef_fact_by_both,
              command = posterior_preplot_fixef(object = model_fact_by_both,
                                                newdata = newdata_preplot_fixef,
+                                               pred_col = "acc_pred")
+  ),
+  tar_target(name = preplot_fixef_fact_by_both_known.facts,
+             command = posterior_preplot_fixef(object = model_fact_by_both_known.facts,
+                                               newdata = newdata_preplot_fixef %>% 
+                                                 # it shouldn't matter whether it's some or all
+                                                 # just can't be none, to pass the recipe bake
+                                                 mutate(already_knew = "some"),
                                                pred_col = "acc_pred")
   )
 )
@@ -356,12 +403,72 @@ target_ms_plots <- list(
   ),
   tar_target(name = plot_coefs_fact_by_both,
              command = preplot_params_fact_by_both %>% 
+               mutate(term = recode_params_pretty(term)) %>% 
+               make_plot_coefs_fact_by_both()
+  ),
+  tar_target(name = plot_coefs_fact_by_both_known.facts,
+             command = preplot_params_fact_by_both_known.facts %>% 
+               mutate(term = recode_params_pretty(term)) %>% 
                make_plot_coefs_fact_by_both()
   ),
   tar_target(name = plot_fixef_fact_by_both,
              command = preplot_fixef_fact_by_both %>% 
                make_plot_fixef_fact_by_both(retrieval_data = retrieval)
-  )
+  ),
+  tar_target(name = plot_fixef_fact_by_both_known.facts,
+             command = preplot_fixef_fact_by_both_known.facts %>% 
+               make_plot_fixef_fact_by_both(retrieval_data = retrieval,
+                                            novel_facts = FALSE)
+  ),
+tar_target(name = plot_encoding_categories,
+           command = {
+             encoding_categories <- encoding %>% 
+               distinct(subj_num, j_score, group, category) %>% 
+               mutate(category = fct_relevel(category,
+                                             "arms", "gems", "musi"),
+                      category = fct_recode(category,
+                                            "Arms and armor" = "arms",
+                                            "Gemstone geology" = "gems",
+                                            "Historical musical instruments" = "musi",
+                                            "Prehistoric animals" = "dino",
+                                            "How cars work" = "cars",
+                                            "Cooking tools and techniques" = "cook"))
+             
+             plot1 <- encoding_categories %>% 
+               ggplot(aes(x = category, y = j_score, color = group)) +
+               geom_boxplot() +
+               geom_hline(yintercept = median(encoding_categories$j_score), linetype = "dotted") +
+               geom_jitter(alpha = 0.5, width = 0.1) +
+               guides(x = guide_axis(angle = 30)) +
+               labs(x = "Assigned encoding category", y = "Trivia expertise", color = "Category split")
+             
+             plot2 <- retrieval %>% 
+               filter(already_knew == "none") %>% 
+               mutate(category = fct_relevel(category,
+                                             "arms", "gems", "musi"),
+                      category = fct_recode(category,
+                                            "Arms and armor" = "arms",
+                                            "Gemstone geology" = "gems",
+                                            "Historical musical instruments" = "musi",
+                                            "Prehistoric animals" = "dino",
+                                            "How cars work" = "cars",
+                                            "Cooking tools and techniques" = "cook")) %>% 
+               group_by(subj_num, group, category) %>% 
+               summarize(mean_acc = mean(acc_recall > 0), .groups = "drop") %>% 
+               ggplot(aes(x = category, y = mean_acc, color = group)) +
+               geom_boxplot() +
+               geom_jitter(alpha = 0.5, width = 0.1) +
+               guides(x = guide_axis(angle = 30)) +
+               labs(x = "Assigned encoding category", y = "% novel facts recalled", color = "Category split")
+             
+             encoding_category_legend <- get_legend(plot2)
+             
+             plot_grid(plot1 + guides(color = "none") + theme_bw(),
+                       plot2 + guides(color = "none") + theme_bw(),
+                       labels = "AUTO") %>% 
+               plot_grid(encoding_category_legend,
+                         rel_widths = c(2, 0.25))
+           })
 )
 
 target_ms_figs <- list(
@@ -417,6 +524,39 @@ target_ms_figs <- list(
                          ncol = 3,
                          nrow = 1,
                          base_asp = 1.618/2)
+               
+               path
+             },
+             format = "file"),
+  tar_target(name = fig_supp_fact_by_both_known.facts,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig_supp_fact_by_both_known_facts.png")
+               figure <- plot_grid(plot_coefs_fact_by_both_known.facts +
+                                     theme_ms(base_size = fontsize_ms,
+                                              base_family = font_ms),
+                                   plot_fixef_fact_by_both_known.facts + 
+                                     scale_color_manual(values = c("correct" = "#b580b6", "incorrect" = "#2c2aa6")) +
+                                     theme_ms(base_size = fontsize_ms,
+                                              base_family = font_ms,
+                                              legend.position = c(0, 1),
+                                              legend.justification = c(0, 1)),
+                                   nrow = 1,
+                                   labels = letters[1:2])
+               save_plot(path,
+                         figure,
+                         ncol = 3,
+                         nrow = 1,
+                         base_asp = 1.618/2)
+               
+               path
+             },
+             format = "file"),
+  tar_target(name = fig_supp_encoding_categories,
+             command = {
+               path <- here::here("ignore", "figs", "ms_fig_supp_encoding_categories.png")
+               save_plot(path,
+                         plot_encoding_categories,
+                         base_height = 6)
                
                path
              },

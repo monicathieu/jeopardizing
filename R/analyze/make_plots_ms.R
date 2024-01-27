@@ -23,6 +23,24 @@ theme_ms <- function (base_size, base_family, ...) {
 
 ## functions ----
 
+recode_params_pretty <- function (col) {
+  quiet_fct_recode <- quietly(fct_recode)
+  out_quiet <- quiet_fct_recode(
+    col,
+    "Intercept" = "intercept",
+    "Interest at encoding" = "interest",
+    "Trivia expertise" = "j_score",
+    "First vs. second museum" = "from_encoding_late",
+    "Photo memory" = "resp_pic",
+    "Museum memory" = "resp_source",
+    "Expertise x photo memory" = "resp_pic:j_score",
+    "Expertise x museum memory" = "resp_source:j_score",
+    "Photo memory x museum memory" = "resp_pic:resp_source",
+    "Photo x museum x expertise" = "resp_pic:resp_source:j_score"
+  )
+  return (out_quiet$result)
+}
+
 make_plot_demos <- function (demo_data) {
   demo_data %>% 
     mutate(gender = coalesce(gender, "not reported")) %>% 
@@ -99,19 +117,12 @@ make_plot_coefs_fact_by_pic <- function (preplot_params) {
   preplot_params %>% 
     summarize_params() %>% 
     mutate(term = fct_relevel(term,
-                              "intercept",
-                              "interest",
-                              "j_score",
-                              "from_encoding_late",
-                              "resp_pic",
-                              "resp_pic:j_score"),
-           term = fct_recode(term,
-                             "Intercept" = "intercept",
-                             "Interest at encoding" = "interest",
-                             "Trivia expertise" = "j_score",
-                             "First vs. second museum" = "from_encoding_late",
-                             "Photo memory" = "resp_pic",
-                             "Expertise x photo memory" = "resp_pic:j_score")) %>% 
+                              "Intercept",
+                              "Interest at encoding",
+                              "Trivia expertise",
+                              "First vs. second museum",
+                              "Photo memory",
+                              "Expertise x photo memory")) %>% 
     make_plot_coefs()
 }
 
@@ -119,19 +130,12 @@ make_plot_coefs_fact_by_source <- function (preplot_params) {
   preplot_params %>% 
     summarize_params() %>%  
     mutate(term = fct_relevel(term,
-                              "intercept",
-                              "interest",
-                              "j_score",
-                              "from_encoding_late",
-                              "resp_source",
-                              "resp_source:j_score"),
-           term = fct_recode(term,
-                             "Intercept" = "intercept",
-                             "Interest at encoding" = "interest",
-                             "Trivia expertise" = "j_score",
-                             "First vs. second museum" = "from_encoding_late",
-                             "Museum memory" = "resp_source",
-                             "Expertise x museum memory" = "resp_source:j_score")) %>% 
+                              "Intercept",
+                              "Interest at encoding",
+                              "Trivia expertise",
+                              "First vs. second museum",
+                              "Museum memory",
+                              "Expertise x museum memory")) %>% 
     make_plot_coefs()
 }
 
@@ -139,27 +143,16 @@ make_plot_coefs_fact_by_both <- function (preplot_params) {
   preplot_params %>% 
     summarize_params() %>%  
     mutate(term = fct_relevel(term,
-                              "intercept",
-                              "interest",
-                              "j_score",
-                              "from_encoding_late",
-                              "resp_pic",
-                              "resp_source",
-                              "resp_pic:j_score",
-                              "resp_source:j_score",
-                              "resp_pic:resp_source",
-                              "resp_pic:resp_source:j_score"),
-           term = fct_recode(term,
-                             "Intercept" = "intercept",
-                             "Interest at encoding" = "interest",
-                             "Trivia expertise" = "j_score",
-                             "First vs. second museum" = "from_encoding_late",
-                             "Photo memory" = "resp_pic",
-                             "Museum memory" = "resp_source",
-                             "Expertise x photo memory" = "resp_pic:j_score",
-                             "Expertise x museum memory" = "resp_source:j_score",
-                             "Photo memory x museum memory" = "resp_pic:resp_source",
-                             "Photo x museum x expertise" = "resp_pic:resp_source:j_score")) %>% 
+                              "Intercept",
+                              "Interest at encoding",
+                              "Trivia expertise",
+                              "First vs. second museum",
+                              "Photo memory",
+                              "Museum memory",
+                              "Expertise x photo memory",
+                              "Expertise x museum memory",
+                              "Photo memory x museum memory",
+                              "Photo x museum x expertise")) %>% 
     make_plot_coefs()
 }
 
@@ -199,9 +192,22 @@ make_plot_fixef_fact_by_other <- function (preplot_fixef, retrieval_data, resp_c
          color = "Expertise (median split)")
 }
 
-make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data) {
-  retrieval_summarized <- retrieval_data %>% 
-    filter(already_knew == "none") %>% 
+make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data, novel_facts = TRUE) {
+  retrieval_summarized <- retrieval_data
+  
+  if (novel_facts) {
+    retrieval_summarized %<>%
+      filter(already_knew == "none")
+    
+    y_label <- "P(recall) for novel facts"
+  } else {
+    retrieval_summarized %<>%
+      filter(already_knew != "none")
+    
+    y_label <- "P(recall) for familiar facts"
+  }
+  
+  retrieval_summarized %<>% 
     mutate(acc_recall = as.numeric(acc_recall > 0),
            across(c(resp_pic, resp_source), \(x) if_else(x > 0, "correct", "incorrect")),
            j_score = if_else(j_score > 0.7, "upper half of expertise", "lower half of expertise")) %>% 
@@ -227,6 +233,6 @@ make_plot_fixef_fact_by_both <- function (preplot_fixef, retrieval_data) {
     facet_grid(~ fct_rev(j_score)) +
     guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 3))) +
     labs(x = "Forced-choice photo memory",
-         y = "P(recall) for novel facts",
+         y = y_label,
          color = "Forced-choice\nmuseum memory")
 }

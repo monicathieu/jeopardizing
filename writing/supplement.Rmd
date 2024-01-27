@@ -13,38 +13,54 @@ output:
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 require(targets)
 require(tidyverse)
+require(cowplot)
 require(magrittr)
 require(rlang)
+source(here::here("R", "analyze", "make_plots_ms.R")) # for recode_params_pretty
 
 target_store <- here::here("ignore", "_targets")
 signif_digits <- 3L
 
 summarize_kable <- function (data,
-                               col,
-                               digs = signif_digits,
-                               fn_list = list(mean = \(x) mean(x, na.rm = T),
-                                              sd = \(x) sd(x, na.rm = T))) {
+                             col,
+                             digs = signif_digits,
+                             fn_list = list(mean = \(x) mean(x, na.rm = T),
+                                            sd = \(x) sd(x, na.rm = T))) {
   data %>% 
-    summarize(across({{col}}, fn_list)) %>% 
+    summarize(across({{col}}, fn_list, .names = "{.fn}")) %>% 
     mutate(across(where(is.numeric), \(x) signif(x, digits = digs))) %>% 
     knitr::kable()
 }
 
-fn_list_model.coefs <- list(ci_95_lower = \(x) quantile(x, .025),
-                            median = \(x) median(x, na.rm = T),
-                            ci_95_upper = \(x) quantile(x, .975))
+fn_list_model.coefs <- list(`95% CI lower bound` = \(x) quantile(x, .025),
+                            Median = \(x) median(x, na.rm = T),
+                            `95% CI upper bound` = \(x) quantile(x, .975))
+
+# Numerical stats mentioned in the main text are also tabulated in this document
+# They are in the chunks tagged with include=FALSE so that they don't appear in the supplement
+# Those chunks are only intended to be run interactively, and then (sigh)
+# the outputs are to be copied and pasted into the main text... it was the easiest overall
 ```
 
 ## Demographics
 
 ```{r include=FALSE}
+# Numbers for the main text
 q_google_demos <- tar_read(q_google_demos, store = target_store)
 j_exp <- tar_read(expertise_summarized, store = target_store)
 
 nrow(q_google_demos)
 ```
 
-### Figure 1: Trivia expertise as a function gender
+### Figure 1: Participant demographics
+
+```{r}
+knitr::include_graphics(here::here("ignore", "figs", "ms_fig3.png"))
+```
+
+Participant demographics. **(A)** 132 total participants aged 18 and up enrolled in the study (M~age~ = `r signif(mean(q_google_demos$age, na.rm = TRUE), digits = 3)` yrs, SD~age~ = `r signif(sd(q_google_demos$age, na.rm = TRUE), digits = 3)` yrs). Histogram bars are stacked by participant gender such that the total bar height reflects all participants in that age bin. **(B)** Participants ranged in pre-existing trivia expertise, as measured by their score out of 50 questions on a cued-recall general knowledge test. The median expertise score was 36/50 questions correct.
+
+### Figure 2: Trivia expertise as a function of gender
 
 ```{r, include=FALSE}
 # These stats are in the paper!
@@ -65,7 +81,7 @@ q_google_demos %>%
 
 Men in our sample tended to score higher than women and genderqueer participants. LearnedLeague, the website from which we recruited, has more men than women participants, so we do not interpret these results any further.
 
-### Table 2: Participant breakdown by race
+### Table 1: Participant breakdown by race
 
 ```{r}
 # These stats are in the paper!
@@ -79,11 +95,31 @@ q_google_demos %>%
 
 The vast majority of participants reported their race as White, with the largest minority of participants reporting their race as Asian/Pacific Islander. While LearnedLeague does not collect race information on members, we expect that this distribution is representative of website membership. We do not use race in any subsequent analyses because of the low race diversity in the sample.
 
-```{r, include=FALSE}
+```{r age-mean-sd, include=FALSE}
 # These stats are in the paper!
 q_google_demos %>% 
   summarize_kable(age)
 ```
+
+```{r plot-jscore-by-age, include=FALSE}
+# TBD whether this should be rendered as a supplemental figure
+q_google_demos %>% 
+  inner_join(j_exp %>% 
+               mutate(subj_num = factor(subj_num)), 
+             by = "subj_num") %>% 
+  lm(scale(j_score) ~ scale(age), data = .) %>% 
+  summary()
+
+q_google_demos %>% 
+  inner_join(j_exp %>% 
+               mutate(subj_num = factor(subj_num)), 
+             by = "subj_num") %>% 
+  ggplot(aes(x = age, y = j_score)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+\newpage
 
 ## Expertise pre-test
 
@@ -98,12 +134,34 @@ After completing the general knowledge pre-test, we asked participants to rate t
 After participants gave their metamemory ratings, we randomly selected one general knowledge fact endorsed by the participant for each of the five potential labels,
 and asked them to describe their metamemory state for that fact in words. We did not analyze any of the metamemory ratings because our validity checks indicated that participants did not use the ratings as instructed. Specifically, when we inspected participants’ descriptions, we found enough responses indicating “just know”-style metamemory for memories that participants had tagged with the “remember” responses (“learning memory” and “related memory”) that we considered the data to be unusable based on participants failing to follow task instructions.
 
+\newpage
+
 ## Encoding task
 
 ```{r include=FALSE}
-# These stats are in the paper!
+# These stats are in response to PB&R Reviewer 2's question about the encoding categories
 encoding <- tar_read(encoding, store = target_store)
 
+encoding_categories <- encoding %>% 
+  distinct(subj_num, j_score, group, category) %>% 
+  mutate(category = fct_relevel(category,
+                                "arms", "gems", "musi"),
+         category = fct_recode(category,
+                               "Arms and armor" = "arms",
+                               "Gemstone geology" = "gems",
+                               "Historical musical instruments" = "musi",
+                               "Prehistoric animals" = "dino",
+                               "How cars work" = "cars",
+                               "Cooking tools and techniques" = "cook"))
+
+encoding_categories %>% 
+  count(group, category) %>% 
+  group_by(group) %>% 
+  mutate(prob = n/sum(n))
+```
+
+```{r include=FALSE}
+# These stats are in the paper!
 encoding %>%
   # there is literally _one_ trial where the timing seems to have messed up and run over
   filter(rt <= 35100) %>% 
@@ -134,10 +192,11 @@ encoding %>%
                                  sd = \(x) sd(x, na.rm = T)))
 ```
 
-### Table 3: Model coefficients for encoding familiarity as a function of trivia expertise
+### Table 2: Model coefficients for encoding familiarity as a function of trivia expertise
 
 ```{r}
 tar_read(preplot_params_alreadyknew, store = target_store) %>%
+  mutate(term = recode_params_pretty(term)) %>% 
   group_by(term) %>% 
   summarize_kable(estimate,
                   fn_list = fn_list_model.coefs)
@@ -145,10 +204,12 @@ tar_read(preplot_params_alreadyknew, store = target_store) %>%
 
 This model was run as a Bayesian multilevel logistic regression (with the same model setting as the main model reported in the main text) predicting fact familiarity for each fact (unfamiliar = 0, familiar = 1) as a function of trivia expertise, with a random intercept for each participant. Participants rated their familiarity as "none", "some", or "all" for each encoding fact. For this analysis, we binned "some" and "all" together to compare the totally unfamiliar facts against facts for which participants reported _at least_ some familiarity.
 
-### Table 4: Model coefficients for encoding interest as a function of trivia expertise
+### Table 3: Model coefficients for encoding interest as a function of trivia expertise
 
 ```{r}
 tar_read(preplot_params_interest, store = target_store) %>%
+  mutate(term = recode_params_pretty(term),
+         term = fct_relevel(term, "Intercept")) %>% 
   group_by(term) %>% 
   summarize_kable(estimate,
                   fn_list = fn_list_model.coefs)
@@ -158,9 +219,96 @@ This model was run as a Bayesian multilevel _linear_ regression (with the same m
 
 For this model, effective N failed to reach 10% of the sampling iterations for several parameters, even after increasing the number of sampling iterations to 3000 iterations/chain. However, no other associated model reliability parameters (like Rhat) suggested concern. We thus report these model outcomes as is. We expect that some of the apparently low N~eff~ may arise from individual participants having different distributions of interest ratings across their facts.
 
+\newpage
+
 ## Retrieval tasks
 
-```{r include=FALSE}
+```{r load-retrieval}
+retrieval <- tar_read(retrieval, store = target_store) %>% 
+  left_join(q_google_demos, by = "subj_num")
+```
+
+### Figure 3: Recall as a function of semantic category
+
+```{r plot-recall-by-category}
+knitr::include_graphics(here::here("ignore", "figs", "ms_fig_supp_encoding_categories.png"))
+```
+
+**(A)** Median trivia expertise of participants assigned to each category is roughly evenly distributed around the whole-sample median trivia expertise (marked on the graph with a reference line). The number of participants assigned to each category is also visible (number of dots for each category). Across participants, the three “academic” categories were assigned roughly evenly, while among the three “non-academic” categories, prehistoric animal facts were presented to about 50% of participants. **(B)** Each dot represents one participant’s recall accuracy for novel facts, with each participant having one dot per color for their “academic” and “nonacademic” categories. Within the “academic” topics, recall performance was not significantly different across categories. Within the “non-academic” topics, performance in the car parts/functions category tended to be superior to that in the prehistoric animals and cooking tools/techniques categories (see following two Tables).
+
+\newpage
+
+### Table 4: Model coefficients for recall as a function of (academic) category and expertise 
+```{r}
+# These stats are in response to PB&R reviewers
+tar_read(preplot_params_fact_academic, store = target_store) %>%
+  mutate(term = recode_params_pretty(term),
+         term = fct_relevel(term, "Intercept"),
+         term = fct_recode(term,
+                           "Arms vs. gems" = "category_arms",
+                           "Musical instruments vs. gems" = "category_musi")) %>% 
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+"Academic" fact categories all showed similar recall performance. This model was run as a Bayesian multilevel logistic regression (with the same model settings as the main model reported in the main text) predicting novel "academic" fact recall (half of trials) as a function of fact category and trivia expertise, with a random intercept for each participant. Gemstone geology was coded as the baseline category, so coefficients reflect differences between gems vs. arms & armor, and gems vs. historical musical instruments. We also included covariates for interest at encoding and first vs. second museum, coded the same way as they were for the model in the main text.
+
+### Table 5: Model coefficients for recall as a function of (nonacademic) category and expertise
+
+```{r}
+# These stats are in response to PB&R reviewers
+tar_read(preplot_params_fact_nonacademic, store = target_store) %>%
+  mutate(term = recode_params_pretty(term),
+         term = fct_relevel(term, "Intercept"),
+         term = fct_recode(term,
+                           "Cooking vs. cars" = "category_cook",
+                           "Prehistoric animals vs. cars" = "category_dino")) %>% 
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+Of "nonacademic" fact categories, recall performance was higher for car facts, but independently of trivia expertise. This model was run as a Bayesian multilevel logistic regression (with the same model settings as the main model reported in the main text) predicting novel "nonacademic" fact recall (half of trials) as a function of fact category and trivia expertise, with a random intercept for each participant. Car parts/function was coded as the baseline category, so coefficients reflect differences between cars vs. cooking techniques, and cars vs. prehistoric animals. We also included covariates for interest at encoding and first vs. second museum, coded the same way as they were for the model in the main text.
+
+
+```{r recall-rt-start-by-age, include=FALSE}
+# These stats are in response to PB&R reviewers
+retrieval %>% 
+  lme4::lmer(rt_start_recall ~ scale(age, scale=F) + (1 | subj_num), data = .) %>% 
+  summary()
+```
+
+```{r recall-rt-end-by-age, include=FALSE}
+# These stats are in response to PB&R reviewers
+retrieval %>% 
+  lme4::lmer(rt_end_recall ~ scale(age, scale=F) + (1 | subj_num), data = .) %>% 
+  summary()
+```
+
+```{r recall-rt-timeout-by-age, include=FALSE}
+# These stats are in response to PB&R reviewers
+retrieval %>% 
+  filter(rt_end_recall >= 15000) %>% 
+  count(subj_num, age) %>% 
+  lm(n ~ scale(age, scale=F), data = .) %>% 
+  summary()
+```
+
+```{r encoding-retrieval-gap, include=FALSE}
+retrieval %>% 
+  select(subj_num, encoding_trial_num, retrieval_trial_num) %>% 
+  # estimated encoding trial length: 27 s (counting already knew and fixation)
+  mutate(encoding_trial_time = (encoding_trial_num - 1) * 27, 
+         # estimated retrieval trial length: 8 s, plus 5 min wait plus encoding offset
+         retrieval_trial_time = (retrieval_trial_num - 1) * 8 + 300 + max(encoding_trial_time), 
+         delay = retrieval_trial_time - encoding_trial_time) %>% 
+  summarize(mean_delay_min = mean(delay/60), sd_delay_min = sd(delay/60)) %>% 
+  mutate(across(where(is.numeric), \(x) signif(x, digits = 3)))
+```
+
+
+```{r preplot-params-fact-by-both-coefs, include=FALSE}
 # These stats are in the paper!
 preplot_params_fact_by_both <- tar_read(preplot_params_fact_by_both, store = target_store) 
 
@@ -170,7 +318,7 @@ preplot_params_fact_by_both %>%
                   fn_list = fn_list_model.coefs)
 ```
 
-```{r include=FALSE}
+```{r preplot-params-fact-by-both-simple-fx, include=FALSE}
 # These stats are in the paper!
 # "low" trivia expertise for the preplots is j_score = -2
 # while "high" trivia expertise is +1
@@ -198,10 +346,106 @@ tar_read(preplot_fixef_fact_by_both, store = target_store) %>%
                   fn_list = list(median = median))
 ```
 
-### Table 5: Model coefficients for photo memory as a function of trivia expertise
+```{r recall-rt-jscore, include=FALSE}
+# These stats are in the response to PB&R reviewers
+retrieval %>% 
+  # filter(acc_recall > 0) %>% 
+  mutate(across(starts_with("resp"), \(x) as.integer(x > 0)),
+         j_score = (j_score - 0.7) * 10) %>% 
+  lme4::glmer(rt_start_recall ~ j_score + (1 | subj_num), data = .) %>% 
+  broom.mixed::tidy()
+```
+
+
+```{r resp-pic-recall-rt, include=FALSE}
+# These stats are in the response to PB&R reviewers
+retrieval %>% 
+  filter(acc_recall > 0) %>% 
+  mutate(across(starts_with("resp"), \(x) as.integer(x > 0)),
+         j_score = (j_score - 0.7) * 10) %>% 
+  lme4::glmer(resp_pic ~ scale(rt_start_recall) * j_score + (1 | subj_num),
+              data = ., family = binomial) %>% 
+  broom.mixed::tidy()
+```
+
+```{r preplot-params-resp-pic-recall-rt-coefs, include=FALSE}
+# These stats are in the paper! After request by PB&R reviewers
+preplot_params_pic_rt.recall <- tar_read(preplot_params_pic_rt.recall, store = target_store) 
+
+preplot_params_pic_rt.recall %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+```{r preplot-params-resp-pic-recall-rt-simple-fx, include=FALSE}
+# These stats are in the paper! After request by PB&R reviewers
+# "low" trivia expertise for the preplots is j_score = -2
+# while "high" trivia expertise is +1
+preplot_params_pic_rt.recall %>% 
+  filter(term %in% c("rt_start_recall", "rt_start_recall:j_score")) %>% 
+  mutate(term = str_replace_all(term, ":", ".")) %>% 
+  pivot_wider(names_from = term,
+              values_from = estimate) %>% 
+  mutate(low = rt_start_recall - 2*rt_start_recall.j_score,
+         high = rt_start_recall + rt_start_recall.j_score) %>% 
+  select(iteration, low, high) %>% 
+  pivot_longer(cols = c(low, high),
+               names_to = "j_score",
+               values_to = "estimate") %>% 
+  group_by(j_score) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+```{r preplot-params-resp-source-recall-rt-coefs, include=FALSE}
+# These stats are in the paper! After request by PB&R reviewers
+preplot_params_source_rt.recall <- tar_read(preplot_params_source_rt.recall, store = target_store) 
+
+preplot_params_source_rt.recall %>%
+  group_by(term) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+```{r preplot-params-resp-source-recall-rt-simple-fx, include=FALSE}
+# These stats are in the paper! After request by PB&R reviewers
+# "low" trivia expertise for the preplots is j_score = -2
+# while "high" trivia expertise is +1
+preplot_params_source_rt.recall %>% 
+  filter(term %in% c("rt_start_recall", "rt_start_recall:j_score")) %>% 
+  mutate(term = str_replace_all(term, ":", ".")) %>% 
+  pivot_wider(names_from = term,
+              values_from = estimate) %>% 
+  mutate(low = rt_start_recall - 2*rt_start_recall.j_score,
+         high = rt_start_recall + rt_start_recall.j_score) %>% 
+  select(iteration, low, high) %>% 
+  pivot_longer(cols = c(low, high),
+               names_to = "j_score",
+               values_to = "estimate") %>% 
+  group_by(j_score) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
+```{r subset-correct-recall-details, include=FALSE}
+# These stats are also in the response to PB&R reviewers
+retrieval %>% 
+  filter(acc_recall > 0) %>% 
+  mutate(across(starts_with("resp"), \(x) as.integer(x > 0)),
+         no_details = as.integer(resp_source == 0 & resp_pic == 0),
+         j_score = (j_score - 0.7) * 10) %>% 
+  lme4::glmer(no_details ~ j_score + (1 | subj_num),
+              data = .,
+              family = binomial) %>% 
+  summary()
+```
+
+### Table 6: Model coefficients for photo memory as a function of trivia expertise
 
 ```{r}
 tar_read(preplot_params_pic, store = target_store) %>%
+  mutate(term = recode_params_pretty(term)) %>% 
   group_by(term) %>% 
   summarize_kable(estimate,
                   fn_list = fn_list_model.coefs)
@@ -209,13 +453,61 @@ tar_read(preplot_params_pic, store = target_store) %>%
 
 This model was run as a Bayesian multilevel logistic regression (with the same model settings as the main model reported in the main text) predicting binary photo recognition memory as a function of trivia expertise, with a random intercept for each participant. We also included covariates for interest at encoding and first vs. second museum, coded the same way as they were for the model in the main text.
 
-### Table 6: Model coefficients for museum memory as a function of trivia expertise
+### Table 7: Model coefficients for museum memory as a function of trivia expertise
 
 ```{r}
 tar_read(preplot_params_source, store = target_store) %>%
+  mutate(term = recode_params_pretty(term)) %>% 
   group_by(term) %>% 
   summarize_kable(estimate,
                   fn_list = fn_list_model.coefs)
 ```
 
 This model was run as a Bayesian multilevel logistic regression (with the same model settings as the main model reported in the main text) predicting binary museum recognition memory as a function of trivia expertise, with a random intercept for each participant. We also included covariates for interest at encoding and first vs. second museum, coded the same way as they were for the model in the main text.
+
+### Table 8: Model coefficients for fact recall as a function of expertise, for _familiar_ facts
+
+```{r}
+# Values from this table are also reported in the response to PB&R reviewers
+preplot_params_fact_by_both_known.facts <- tar_read(preplot_params_fact_by_both_known.facts, store = target_store)
+
+preplot_params_fact_by_both_known.facts %>% 
+  mutate(term = recode_params_pretty(term),
+         term = fct_relevel(term,
+                              "Intercept",
+                              "Interest at encoding",
+                              "Trivia expertise",
+                              "First vs. second museum",
+                              "Photo memory",
+                              "Museum memory",
+                              "Expertise x photo memory",
+                              "Expertise x museum memory",
+                              "Photo memory x museum memory",
+                              "Photo x museum x expertise")) %>% 
+  group_by(term) %>% 
+    summarize_kable(estimate,
+                    fn_list = fn_list_model.coefs)
+```
+
+This model was run as a Bayesian multilevel logistic regression, with the same model settings as the main model reported in the main text. This model has the exact same outcome and predictors as the main model, but has been fit only to trials where participants reported knowing "some" or "all" of the fact prior to the current study. Critically, we do not find the same three-way interaction effect of photo memory, museum memory, and trivia expertise when analyzing recall performance only for previously familiar facts.
+
+```{r include=FALSE}
+# These simple effect stats are in the response to PB&R reviewers
+preplot_params_fact_by_both_known.facts %>% 
+  filter(term %in% c("resp_pic", "resp_source", "resp_pic:j_score", "resp_source:j_score")) %>% 
+  mutate(term = str_replace_all(term, ":", ".")) %>% 
+  separate_wider_delim(term, delim = ".", names = c("term", "coef_type"), too_few = "align_start") %>% 
+  mutate(coef_type = if_else(is.na(coef_type), "main", "intxn")) %>% 
+  pivot_wider(names_from = coef_type,
+              values_from = estimate) %>% 
+  mutate(low = main - 2*intxn,
+         high = main + intxn) %>% 
+  select(iteration, term, low, high) %>% 
+  pivot_longer(cols = c(low, high),
+               names_to = "j_score",
+               values_to = "estimate") %>% 
+  group_by(term, j_score) %>% 
+  summarize_kable(estimate,
+                  fn_list = fn_list_model.coefs)
+```
+
