@@ -1,7 +1,7 @@
 ---
 title: "Supplementary material"
-subtitle: "Main paper: Episodic memory bolsters acquisition of new semantic knowledge in trivia experts"
-author: "MT, LW, & MA"
+subtitle: "Main paper: New semantic knowledge is more strongly coupled with episodic memory in trivia experts"
+author: "Monica K. Thieu, Lauren J. Wilkins, & Mariam Aly"
 date: "Updated `r Sys.Date()`"
 output:
   pdf_document:
